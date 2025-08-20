@@ -1,0 +1,280 @@
+.my-bookings-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+/* ADD THESE HEADER STYLES FROM DASHBOARD.CSS */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 5%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.user-welcome h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.main-nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #6c757d;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 0.5rem 0;
+  position: relative;
+  font-size: inherit; /* This ensures consistent font size */
+}
+
+.nav-link:hover {
+  color: #3a86ff;
+}
+
+.nav-link.active {
+  color: #3a86ff;
+  font-weight: 600;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #3a86ff;
+}
+
+.bookings-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.bookings-content h1 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.no-bookings {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.no-bookings-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.no-bookings h3 {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.no-bookings p {
+  color: #888;
+  margin-bottom: 2rem;
+}
+
+.browse-button {
+  background: #3a86ff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.browse-button:hover {
+  background: #2667d6;
+  transform: translateY(-1px);
+}
+
+.bookings-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.booking-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+}
+
+.booking-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.booking-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.pending.urgent {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  animation: pulse 2s infinite;
+}
+
+.status-badge.expired {
+  background: #6c757d;
+  color: white;
+  border: 1px solid #495057;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.status-badge.confirmed {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.booking-details {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-row .label {
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-row .cost {
+  font-weight: 700;
+  color: #3a86ff;
+  font-size: 1.1rem;
+}
+
+.payment-notice, .confirmation-notice {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border-left: 4px solid #ffc107;
+}
+
+.confirmation-notice {
+  border-left-color: #28a745;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
+}
+
+.notice-header strong {
+  color: #333;
+}
+
+.payment-notice p, .confirmation-notice p {
+  margin: 0 0 1rem 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.venmo-details {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.venmo-details span {
+  color: #555;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .main-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .bookings-content {
+    padding: 1rem;
+  }
+  
+  .booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

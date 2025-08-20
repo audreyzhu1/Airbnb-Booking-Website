@@ -1,0 +1,240 @@
+.calendar-view {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .calendar-header h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin: 0;
+  }
+  
+  .nav-button {
+    background: #3a86ff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .nav-button:hover {
+    background: #2667d6;
+    transform: scale(1.1);
+  }
+  
+  .calendar-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .control-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .deselect-button {
+    background: #6c757d;
+    color: white;
+  }
+  
+  .deselect-button:hover {
+    background: #5a6268;
+  }
+  
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: 1rem;
+  }
+  
+  .weekday {
+    text-align: center;
+    font-weight: 600;
+    color: #666;
+    padding: 0.5rem;
+    background: #f8f9fa;
+  }
+  
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: #e9ecef;
+    border: 1px solid #e9ecef;
+  }
+  
+  .calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    position: relative;
+  }
+  
+  .calendar-day.empty {
+    background: #f8f9fa;
+    cursor: default;
+  }
+  
+  .calendar-day.available {
+    background: #d4edda;
+    color: #155724;
+    cursor: pointer;
+  }
+  
+  .calendar-day.available:hover {
+    background: #c3e6cb;
+    transform: scale(1.05);
+  }
+  
+  .calendar-day.unavailable {
+    background: #f8d7da;
+    color: #721c24;
+    cursor: not-allowed;
+  }
+  
+  .calendar-day.selected {
+    background: #3a86ff;
+    color: white;
+    font-weight: 700;
+  }
+  
+  .calendar-day.in-range {
+    background: #cce7ff;
+    color: #003d82;
+  }
+  
+  .selection-info {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .selected-property h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+  }
+  
+  .selected-property p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .selected-dates {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+  }
+  
+  .selected-dates p {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+  }
+  
+  .book-selected-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .book-selected-btn:hover {
+    background: #218838;
+    transform: translateY(-1px);
+  }
+  
+  .calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+  }
+  
+  .legend-color.available {
+    background: #d4edda;
+  }
+  
+  .legend-color.unavailable {
+    background: #f8d7da;
+  }
+  
+  .legend-color.selected {
+    background: #3a86ff;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .calendar-view {
+      padding: 1rem;
+    }
+    
+    .calendar-grid {
+      gap: 0;
+    }
+    
+    .calendar-day {
+      font-size: 0.8rem;
+    }
+    
+    .calendar-legend {
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .calendar-controls {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .control-button {
+      width: 100%;
+      max-width: 200px;
+    }
+  }

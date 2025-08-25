@@ -1,0 +1,386 @@
+.listing-view {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .availability-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .availability-header h3 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+  
+  .availability-header p {
+    color: #666;
+    font-size: 1rem;
+  }
+  
+  .availability-list {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .availability-card {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+  }
+  
+  .availability-card:hover {
+    border-color: #007bff;
+    background: #f8f9ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  }
+  
+  .availability-card.selected {
+    border-color: #007bff;
+    background: #e3f2fd;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+  }
+  
+  .period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .period-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  
+  .period-dates {
+    background: #007bff;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  
+  .period-details {
+    margin-bottom: 1rem;
+  }
+  
+  .availability-text {
+    margin-bottom: 1rem;
+    color: #555;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  .period-info {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .min-stay, .base-cost {
+    font-size: 0.9rem;
+    color: #666;
+    padding: 0.25rem 0.75rem;
+    background: #f1f3f4;
+    border-radius: 15px;
+  }
+  
+  .property-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .property-link:hover {
+    text-decoration: underline;
+    color: #0056b3;
+  }
+  
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+  
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .modal-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+  }
+  
+  .close-modal-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  
+  .close-modal-btn:hover {
+    color: #333;
+    background: #f8f9fa;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+  }
+  
+  .cancel-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .cancel-btn:hover {
+    background: #5a6268;
+  }
+  
+  .booking-period {
+    color: #007bff;
+    font-weight: 500;
+    margin-bottom: 2rem;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+  }
+  
+  .date-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .date-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .date-input-group label {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9rem;
+  }
+  
+  .date-input, .nights-select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  
+  .date-input:focus, .nights-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  }
+  
+  .date-input:disabled {
+    background: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  /* Booking Summary */
+  .booking-summary {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+  }
+  
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f3f4;
+  }
+  
+  .summary-row:last-child {
+    border-bottom: none;
+  }
+  
+  .summary-row.total {
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #007bff;
+    margin-top: 0.5rem;
+  }
+  
+  .summary-row.total span:last-child {
+    color: #007bff;
+    font-size: 1.2rem;
+  }
+  
+  /* Book Button in Modal */
+  .modal-content .book-button {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .modal-content .book-button:hover:not(:disabled) {
+    background: #218838;
+  }
+  
+  .modal-content .book-button:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  .validation-message {
+    color: #dc3545;
+    font-size: 0.9rem;
+    text-align: center;
+    margin: 0;
+    padding: 0.5rem;
+    background: #f8d7da;
+    border-radius: 6px;
+    border: 1px solid #f5c6cb;
+  }
+  
+  /* No Availability State */
+  .no-availability {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+  }
+  
+  .no-availability-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .no-availability h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+  
+  .no-availability p {
+    color: #666;
+    font-size: 1rem;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .listing-view {
+      padding: 1rem;
+      margin: 0;
+      border-radius: 0;
+    }
+    
+    .period-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .date-selection {
+      grid-template-columns: 1fr;
+    }
+    
+    .period-info {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .summary-row {
+      font-size: 0.9rem;
+    }
+  
+    /* Modal responsive */
+    .modal-overlay {
+      padding: 0.5rem;
+    }
+  
+    .modal-content {
+      padding: 1.5rem;
+      max-height: 95vh;
+    }
+  
+    .modal-actions {
+      flex-direction: column;
+    }
+  
+    .cancel-btn,
+    .modal-content .book-button {
+      width: 100%;
+    }
+  }

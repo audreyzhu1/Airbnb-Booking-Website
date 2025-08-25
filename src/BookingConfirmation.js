@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import emailjs from 'emailjs-com';
 import './BookingConfirmation.css';
 
 export default function BookingConfirmation({ bookingData, user, addBooking }) {
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
   const [guestInfo, setGuestInfo] = useState({
     email: user?.email || '',
     firstName: '',
@@ -37,7 +39,71 @@ export default function BookingConfirmation({ bookingData, user, addBooking }) {
     return dates;
   };
 
-  const handleConfirm = () => {
+  const sendConfirmationEmails = async (bookingWithGuestInfo) => {
+    setEmailSending(true);
+    
+    try {
+      // Email template parameters for customer
+      const customerEmailParams = {
+        to_email: guestInfo.email,
+        to_name: `${guestInfo.firstName} ${guestInfo.lastName}`,
+        guest_name: `${guestInfo.firstName} ${guestInfo.lastName}`,
+        resort_name: bookingData.resort,
+        unit_type: bookingData.unitType,
+        check_in_date: bookingData.checkIn,
+        check_out_date: bookingData.checkOut,
+        nights: bookingData.nights,
+        total_cost: bookingData.cost,
+        number_of_guests: guestInfo.numberOfGuests,
+        booking_date: new Date().toLocaleDateString(),
+        venmo_handle: '@JingZhu',
+        message: `Your WorldMark booking has been confirmed! Please Venmo ${bookingData.cost} to @JingZhu within 24 hours to secure your reservation.`
+      };
+
+      // Email template parameters for admin
+      const adminEmailParams = {
+        to_email: 'admin@worldmark.com', // Replace with actual admin email
+        admin_name: 'Admin',
+        guest_name: `${guestInfo.firstName} ${guestInfo.lastName}`,
+        guest_email: guestInfo.email,
+        resort_name: bookingData.resort,
+        unit_type: bookingData.unitType,
+        check_in_date: bookingData.checkIn,
+        check_out_date: bookingData.checkOut,
+        nights: bookingData.nights,
+        total_cost: bookingData.cost,
+        number_of_guests: guestInfo.numberOfGuests,
+        booking_date: new Date().toLocaleDateString(),
+        message: `New booking received from ${guestInfo.firstName} ${guestInfo.lastName} (${guestInfo.email})`
+      };
+
+      // Send customer confirmation email
+      await emailjs.send(
+        'service_kgvbpbb', // Replace with your EmailJS service ID
+        'template_1xvy3d5', // Customer email template ID
+        customerEmailParams,
+        'u01hx65yCbRjGPmKY' // Replace with your EmailJS public key
+      );
+
+      // Send admin notification email
+      await emailjs.send(
+        'service_kgvbpbb', // Replace with your EmailJS service ID
+        'template_1eoftzg', // Admin email template ID
+        adminEmailParams,
+        'u01hx65yCbRjGPmKY' // Replace with your EmailJS public key
+      );
+
+      console.log('✅ Confirmation emails sent successfully');
+      
+    } catch (error) {
+      console.error('❌ Error sending emails:', error);
+      // Don't block the booking if email fails
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleConfirm = async () => {
     // Validate required fields
     if (!guestInfo.email || !guestInfo.firstName || !guestInfo.lastName || !guestInfo.numberOfGuests) {
       alert('Please fill in all required fields.');
@@ -81,6 +147,10 @@ export default function BookingConfirmation({ bookingData, user, addBooking }) {
       };
       console.log("🔍 Booking with dates:", bookingWithGuestInfo);
       addBooking(bookingWithGuestInfo);
+
+      // Send confirmation emails
+      await sendConfirmationEmails(bookingWithGuestInfo);
+      
     } else {
       console.log("❌ Missing addBooking or bookingData");
     }
@@ -98,6 +168,11 @@ export default function BookingConfirmation({ bookingData, user, addBooking }) {
         <div className="confirmation-content">
           <div className="success-icon">✅</div>
           <h1>Booking Confirmed!</h1>
+          
+          <div className="email-confirmation">
+            <p><strong>📧 Confirmation email sent to {guestInfo.email}</strong></p>
+            <p><em>Please check your email for booking details and payment instructions.</em></p>
+          </div>
           
           <div className="payment-instructions">
             <h2>Payment Instructions</h2>
@@ -262,8 +337,9 @@ export default function BookingConfirmation({ bookingData, user, addBooking }) {
           <button 
             onClick={handleConfirm}
             className="confirm-btn"
+            disabled={emailSending}
           >
-            Confirm Booking
+            {emailSending ? 'Sending...' : 'Confirm Booking'}
           </button>
         </div>
       </div>

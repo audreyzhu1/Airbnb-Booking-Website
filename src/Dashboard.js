@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import CalendarView from './CalendarView';
+import ListingView from './ListingView';  // Changed from CalendarView to ListingView
 import ChatInterface from './ChatInterface';
 import './Dashboard.css';
 
@@ -13,6 +13,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   const [maxStayDays, setMaxStayDays] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
+  const [flexibleDates, setFlexibleDates] = useState(false);
   const [data, setData] = useState([]);
   const [mergedAvailability, setMergedAvailability] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   const [unitTypeOptions, setUnitTypeOptions] = useState([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [exactMatches, setExactMatches] = useState([]);
-  const [showCalendarFallback, setShowCalendarFallback] = useState(false);
+  const [showListingFallback, setShowListingFallback] = useState(false); // Changed from showCalendarFallback
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,83 +38,82 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     }
   }, [location.pathname]);
 
-  // In your useEffect around line 40, replace this section:
-
-useEffect(() => {
-  async function fetchData() {
-    try {
-      setLoading(true);
-      const res = await fetch("http://localhost:4000/api/availability");
-      const json = await res.json();
-      console.log("🔍 Raw data from API:", json);
-      setData(json);
-      
-      // ADD DEBUG CODE HERE - RIGHT AFTER GETTING RAW DATA
-      console.log("🔍 TOTAL RAW ENTRIES:", json.length);
-      
-      // Check if August dates are in raw data
-      const augustEntries = json.filter(item => {
-        const dateRange = item.dateRange || item['Date Range'];
-        return dateRange && dateRange.includes('8/');
-      });
-      console.log("🔍 AUGUST ENTRIES IN RAW DATA:", augustEntries.length);
-      console.log("🔍 August entries:", augustEntries);
-      
-      // Check what date ranges we have
-      const allDateRanges = json.map(item => item.dateRange).filter(Boolean);
-      console.log("🔍 ALL DATE RANGES:", allDateRanges);
-      
-      // Check cancel-by dates for August entries
-      console.log("🔍 CANCEL-BY DATE CHECK:");
-      const currentDate = new Date();
-      augustEntries.forEach((item, index) => {
-        const cancelDate = new Date(item.cancelByDate);
-        console.log(`August entry ${index}: Cancel by ${cancelDate}, Still valid: ${cancelDate > currentDate}`);
-      });
-      
-      // Extract unique resorts and unit types
-      const resorts = [...new Set(json.map(item => item.resort))];
-      const unitTypes = [...new Set(json.map(item => item.unitType))];
-      
-      console.log("🔍 Extracted resorts:", resorts);
-      console.log("🔍 Extracted unit types:", unitTypes);
-      
-      setResortOptions(resorts);
-      setUnitTypeOptions(unitTypes);
-      
-      // Process and merge overlapping bookings, then filter out booked dates
-      const processed = processBookingData(json);
-      console.log("🔍 Processed data:", processed);
-      
-      // CHECK AUGUST ENTRIES AFTER PROCESSING
-      const augustAfterProcessing = processed.filter(item => {
-        const dateRange = item.dateRange;
-        return dateRange && dateRange.includes('8/');
-      });
-      console.log("🔍 AUGUST ENTRIES AFTER PROCESSING:", augustAfterProcessing.length);
-      console.log("🔍 August after processing:", augustAfterProcessing);
-      
-      const filtered = filterBookedDates(processed, userBookings);
-      console.log("🔍 Filtered data (after removing booked dates):", filtered);
-      
-      // CHECK AUGUST ENTRIES AFTER FILTERING BOOKED DATES
-      const augustAfterFiltering = filtered.filter(item => {
-        const dateRange = item.dateRange;
-        return dateRange && dateRange.includes('8/');
-      });
-      console.log("🔍 AUGUST ENTRIES AFTER FILTERING BOOKED DATES:", augustAfterFiltering.length);
-      console.log("🔍 August after filtering:", augustAfterFiltering);
-      
-      setMergedAvailability(filtered);
-      
-    } catch (err) {
-      console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const res = await fetch("http://localhost:4000/api/availability");
+        const json = await res.json();
+        console.log("🔍 Raw data from API:", json);
+        setData(json);
+        
+        // ADD DEBUG CODE HERE - RIGHT AFTER GETTING RAW DATA
+        console.log("🔍 TOTAL RAW ENTRIES:", json.length);
+        
+        // Check if August dates are in raw data
+        const augustEntries = json.filter(item => {
+          const dateRange = item.dateRange || item['Date Range'];
+          return dateRange && dateRange.includes('8/');
+        });
+        console.log("🔍 AUGUST ENTRIES IN RAW DATA:", augustEntries.length);
+        console.log("🔍 August entries:", augustEntries);
+        
+        // Check what date ranges we have
+        const allDateRanges = json.map(item => item.dateRange).filter(Boolean);
+        console.log("🔍 ALL DATE RANGES:", allDateRanges);
+        
+        // Check cancel-by dates for August entries
+        console.log("🔍 CANCEL-BY DATE CHECK:");
+        const currentDate = new Date();
+        augustEntries.forEach((item, index) => {
+          const cancelDate = new Date(item.cancelByDate);
+          console.log(`August entry ${index}: Cancel by ${cancelDate}, Still valid: ${cancelDate > currentDate}`);
+        });
+        
+        // Extract unique resorts and unit types
+        const resorts = [...new Set(json.map(item => item.resort))];
+        const unitTypes = [...new Set(json.map(item => item.unitType))];
+        
+        console.log("🔍 Extracted resorts:", resorts);
+        console.log("🔍 Extracted unit types:", unitTypes);
+        
+        setResortOptions(resorts);
+        setUnitTypeOptions(unitTypes);
+        
+        // Process and merge overlapping bookings, then filter out booked dates
+        const processed = processBookingData(json);
+        console.log("🔍 Processed data:", processed);
+        
+        // CHECK AUGUST ENTRIES AFTER PROCESSING
+        const augustAfterProcessing = processed.filter(item => {
+          const dateRange = item.dateRange;
+          return dateRange && dateRange.includes('8/');
+        });
+        console.log("🔍 AUGUST ENTRIES AFTER PROCESSING:", augustAfterProcessing.length);
+        console.log("🔍 August after processing:", augustAfterProcessing);
+        
+        const filtered = filterBookedDates(processed, userBookings);
+        console.log("🔍 Filtered data (after removing booked dates):", filtered);
+        
+        // CHECK AUGUST ENTRIES AFTER FILTERING BOOKED DATES
+        const augustAfterFiltering = filtered.filter(item => {
+          const dateRange = item.dateRange;
+          return dateRange && dateRange.includes('8/');
+        });
+        console.log("🔍 AUGUST ENTRIES AFTER FILTERING BOOKED DATES:", augustAfterFiltering.length);
+        console.log("🔍 August after filtering:", augustAfterFiltering);
+        
+        setMergedAvailability(filtered);
+        
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-  fetchData();
-}, [userBookings]);
+    fetchData();
+  }, [userBookings]);
+
   // Filter out booked dates from availability
   const filterBookedDates = (availabilityData, bookings) => {
     if (!bookings || bookings.length === 0) return availabilityData;
@@ -186,159 +186,144 @@ useEffect(() => {
   };
 
   // Search for exact matches based on check-in/check-out dates
-  // Replace your date parsing in the searchExactMatches function with this:
+  const searchExactMatches = () => {
+    if (!checkInDate || !checkOutDate) {
+      alert("Please select both check-in and check-out dates");
+      return;
+    }
 
-// Replace your date parsing in the searchExactMatches function with this:
+    // Parse dates as local dates to avoid timezone issues
+    const parseLocalDate = (dateString) => {
+      const [year, month, day] = dateString.split('-');
+      return new Date(year, month - 1, day); // month is 0-indexed
+    };
 
-// Replace your date parsing in the searchExactMatches function with this:
+    const checkIn = parseLocalDate(checkInDate);
+    const checkOut = parseLocalDate(checkOutDate);
+    
+    if (checkOut <= checkIn) {
+      alert("Check-out date must be after check-in date");
+      return;
+    }
 
-// Replace your date parsing in the searchExactMatches function with this:
+    const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+    
+    console.log("🔍 Searching for matches:");
+    console.log("Check-in:", checkInDate, "->", checkIn);
+    console.log("Check-out:", checkOutDate, "->", checkOut);
+    console.log("Nights:", nights);
+    console.log("Available data to search:", mergedAvailability);
+    
+    // Find availabilities that contain the requested date range
+    let matches = mergedAvailability.filter(availability => {
+      console.log("🔍 RAW AVAILABILITY OBJECT:", availability);
+      console.log("🔍 startDate:", availability.startDate, "type:", typeof availability.startDate);
+      console.log("🔍 endDate:", availability.endDate, "type:", typeof availability.endDate);
+      console.log("🔍 dateRange:", availability.dateRange);
+      
+      let availStart, availEnd;
+      
+      // Parse availability dates (they're in ISO format like "2025-08-16T07:00:00.000Z")
+      if (availability.startDate && availability.endDate) {
+        console.log("🔍 Using startDate and endDate fields");
+        
+        // Handle ISO format dates
+        const parseISODate = (isoString) => {
+          console.log("🔍 Parsing ISO date:", isoString);
+          const date = new Date(isoString);
+          console.log("🔍 Parsed to:", date);
+          // Convert to local date (strip time and timezone)
+          const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          console.log("🔍 Local date:", localDate);
+          return localDate;
+        };
+        
+        availStart = parseISODate(availability.startDate);
+        availEnd = parseISODate(availability.endDate);
+      } else if (availability.dateRange) {
+        console.log("🔍 Using dateRange field");
+        // Parse from dateRange like "8/16-8/23"
+        const [startPart, endPart] = availability.dateRange.split('-');
+        console.log("🔍 Parsing from dateRange:", startPart, "to", endPart);
+        
+        // Add current year if not present
+        const currentYear = new Date().getFullYear();
+        const startWithYear = `${startPart}/${currentYear}`;
+        const endWithYear = `${endPart}/${currentYear}`;
+        
+        console.log("🔍 With year added:", startWithYear, "to", endWithYear);
+        
+        // Parse as M/D/YYYY
+        const parseMMDDYYYY = (dateStr) => {
+          const [month, day, year] = dateStr.split('/');
+          return new Date(year, month - 1, day);
+        };
+        
+        availStart = parseMMDDYYYY(startWithYear);
+        availEnd = parseMMDDYYYY(endWithYear);
+      } else {
+        console.log("🔍 No valid date fields found!");
+        return false;
+      }
+      
+      console.log("🔍 Final parsed dates:", availStart, "to", availEnd);
+      
+      console.log(`Checking ${availability.resort} ${availability.unitType}:`);
+      console.log(`  Available: ${availStart.toDateString()} to ${availEnd.toDateString()}`);
+      console.log(`  Requested: ${checkIn.toDateString()} to ${checkOut.toDateString()}`);
+      
+      // Check if requested dates fall within availability period
+      const datesMatch = checkIn >= availStart && checkOut <= availEnd;
+      console.log(`  Dates match: ${datesMatch}`);
+      
+      // Check if meets minimum stay requirement
+      const meetsMinStay = nights >= (availability.minStayDays || 1);
+      console.log(`  Min stay (${availability.minStayDays || 1}): ${meetsMinStay}`);
+      
+      const result = datesMatch && meetsMinStay;
+      console.log(`  Final result: ${result}`);
+      
+      return result;
+    });
 
-// Replace your date parsing in the searchExactMatches function with this:
+    console.log("🔍 Raw matches found:", matches);
 
-// Replace your date parsing in the searchExactMatches function with this:
+    // Apply additional filters if specified
+    if (resort) {
+      matches = matches.filter(item => item.resort === resort);
+      console.log("🔍 After resort filter:", matches);
+    }
+    if (unitType) {
+      matches = matches.filter(item => item.unitType.includes(unitType));
+      console.log("🔍 After unit type filter:", matches);
+    }
+    if (guests) {
+      matches = matches.filter(item => {
+        const guestCount = parseInt(guests);
+        if (guestCount <= 2 && item.unitType.includes("1 bedroom")) return true;
+        if (guestCount <= 4 && item.unitType.includes("2 bedroom")) return true;
+        if (guestCount <= 6 && item.unitType.includes("3 bedroom")) return true;
+        if (guestCount === 1) return true;
+        return false;
+      });
+      console.log("🔍 After guests filter:", matches);
+    }
 
-// Replace your date parsing in the searchExactMatches function with this:
-
-// Replace your date parsing in the searchExactMatches function with this:
-
-const searchExactMatches = () => {
-  if (!checkInDate || !checkOutDate) {
-    alert("Please select both check-in and check-out dates");
-    return;
-  }
-
-  // Parse dates as local dates to avoid timezone issues
-  const parseLocalDate = (dateString) => {
-    const [year, month, day] = dateString.split('-');
-    return new Date(year, month - 1, day); // month is 0-indexed
+    console.log("🔍 Final matches:", matches);
+    setExactMatches(matches);
+    setSearchPerformed(true);
+    
+    if (matches.length === 0) {
+      setShowListingFallback(true); // Changed from setShowCalendarFallback
+    } else {
+      setShowListingFallback(false); // Changed from setShowCalendarFallback
+    }
   };
 
-  const checkIn = parseLocalDate(checkInDate);
-  const checkOut = parseLocalDate(checkOutDate);
-  
-  if (checkOut <= checkIn) {
-    alert("Check-out date must be after check-in date");
-    return;
-  }
-
-  const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-  
-  console.log("🔍 Searching for matches:");
-  console.log("Check-in:", checkInDate, "->", checkIn);
-  console.log("Check-out:", checkOutDate, "->", checkOut);
-  console.log("Nights:", nights);
-  console.log("Available data to search:", mergedAvailability);
-  
-  // Find availabilities that contain the requested date range
-  let matches = mergedAvailability.filter(availability => {
-    console.log("🔍 RAW AVAILABILITY OBJECT:", availability);
-    console.log("🔍 startDate:", availability.startDate, "type:", typeof availability.startDate);
-    console.log("🔍 endDate:", availability.endDate, "type:", typeof availability.endDate);
-    console.log("🔍 dateRange:", availability.dateRange);
-    
-    let availStart, availEnd;
-    
-    // Parse availability dates (they're in ISO format like "2025-08-16T07:00:00.000Z")
-    if (availability.startDate && availability.endDate) {
-      console.log("🔍 Using startDate and endDate fields");
-      
-      // Handle ISO format dates
-      const parseISODate = (isoString) => {
-        console.log("🔍 Parsing ISO date:", isoString);
-        const date = new Date(isoString);
-        console.log("🔍 Parsed to:", date);
-        // Convert to local date (strip time and timezone)
-        const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        console.log("🔍 Local date:", localDate);
-        return localDate;
-      };
-      
-      availStart = parseISODate(availability.startDate);
-      availEnd = parseISODate(availability.endDate);
-    } else if (availability.dateRange) {
-      console.log("🔍 Using dateRange field");
-      // Parse from dateRange like "8/16-8/23"
-      const [startPart, endPart] = availability.dateRange.split('-');
-      console.log("🔍 Parsing from dateRange:", startPart, "to", endPart);
-      
-      // Add current year if not present
-      const currentYear = new Date().getFullYear();
-      const startWithYear = `${startPart}/${currentYear}`;
-      const endWithYear = `${endPart}/${currentYear}`;
-      
-      console.log("🔍 With year added:", startWithYear, "to", endWithYear);
-      
-      // Parse as M/D/YYYY
-      const parseMMDDYYYY = (dateStr) => {
-        const [month, day, year] = dateStr.split('/');
-        return new Date(year, month - 1, day);
-      };
-      
-      availStart = parseMMDDYYYY(startWithYear);
-      availEnd = parseMMDDYYYY(endWithYear);
-    } else {
-      console.log("🔍 No valid date fields found!");
-      return false;
-    }
-    
-    console.log("🔍 Final parsed dates:", availStart, "to", availEnd);
-    
-    console.log(`Checking ${availability.resort} ${availability.unitType}:`);
-    console.log(`  Available: ${availStart.toDateString()} to ${availEnd.toDateString()}`);
-    console.log(`  Requested: ${checkIn.toDateString()} to ${checkOut.toDateString()}`);
-    
-    // Check if requested dates fall within availability period
-    const datesMatch = checkIn >= availStart && checkOut <= availEnd;
-    console.log(`  Dates match: ${datesMatch}`);
-    
-    // Check if meets minimum stay requirement
-    const meetsMinStay = nights >= (availability.minStayDays || 1);
-    console.log(`  Min stay (${availability.minStayDays || 1}): ${meetsMinStay}`);
-    
-    const result = datesMatch && meetsMinStay;
-    console.log(`  Final result: ${result}`);
-    
-    return result;
-  });
-
-  console.log("🔍 Raw matches found:", matches);
-
-  // Apply additional filters if specified
-  if (resort) {
-    matches = matches.filter(item => item.resort === resort);
-    console.log("🔍 After resort filter:", matches);
-  }
-  if (unitType) {
-    matches = matches.filter(item => item.unitType.includes(unitType));
-    console.log("🔍 After unit type filter:", matches);
-  }
-  if (guests) {
-    matches = matches.filter(item => {
-      const guestCount = parseInt(guests);
-      if (guestCount <= 2 && item.unitType.includes("1 bedroom")) return true;
-      if (guestCount <= 4 && item.unitType.includes("2 bedroom")) return true;
-      if (guestCount <= 6 && item.unitType.includes("3 bedroom")) return true;
-      if (guestCount === 1) return true;
-      return false;
-    });
-    console.log("🔍 After guests filter:", matches);
-  }
-
-  console.log("🔍 Final matches:", matches);
-  setExactMatches(matches);
-  setSearchPerformed(true);
-  
-  if (matches.length === 0) {
-    setShowCalendarFallback(true);
-  } else {
-    setShowCalendarFallback(false);
-  }
-};
   const resetSearch = () => {
     setSearchPerformed(false);
     setExactMatches([]);
-    setShowCalendarFallback(false);
+    setShowListingFallback(false); // Changed from setShowCalendarFallback
     setCheckInDate("");
     setCheckOutDate("");
   };
@@ -499,16 +484,6 @@ const searchExactMatches = () => {
       });
     }
 
-    // Filter by maximum stay days - only show if property minimum <= user's maximum
-    if (maxStayDays) {
-      const requestedMaxStay = parseInt(maxStayDays);
-      filtered = filtered.filter(item => {
-        // User wants at most X days, property requires at least Y days
-        // Show property only if property's minimum <= user's maximum
-        return item.minStayDays <= requestedMaxStay;
-      });
-    }
-
     return filtered;
   };
 
@@ -543,15 +518,13 @@ const searchExactMatches = () => {
         resort: savedResort, 
         unitType: savedUnitType, 
         guests: savedGuests,
-        minStayDays: savedMinStayDays,
-        maxStayDays: savedMaxStayDays
+        minStayDays: savedMinStayDays
       } = location.state.searchState;
       
       setResort(savedResort);
       setUnitType(savedUnitType);
       setGuests(savedGuests);
       setMinStayDays(savedMinStayDays);
-      setMaxStayDays(savedMaxStayDays);
     }
   }, [location.state]);
 
@@ -706,6 +679,7 @@ const searchExactMatches = () => {
                   onChange={(e) => setCheckInDate(e.target.value)}
                   className="form-input"
                   min={new Date().toISOString().split('T')[0]}
+                  disabled={flexibleDates}
                 />
               </div>
 
@@ -718,38 +692,66 @@ const searchExactMatches = () => {
                   onChange={(e) => setCheckOutDate(e.target.value)}
                   className="form-input"
                   min={checkInDate || new Date().toISOString().split('T')[0]}
+                  disabled={flexibleDates}
                 />
               </div>
 
-              {/* Only show min/max stay filters when no exact matches found */}
-              {searchPerformed && exactMatches.length === 0 && (
-                <div className="filter-group">
-                  <label htmlFor="max-stay-select">Maximum stay (days)</label>
-                  <select 
-                    id="max-stay-select"
-                    value={maxStayDays}
-                    onChange={(e) => setMaxStayDays(e.target.value)} 
-                    className="form-select"
-                  >
-                    <option value="">Any maximum</option>
-                    <option value="1">1 day only</option>
-                    <option value="2">2 days max</option>
-                    <option value="3">3 days max</option>
-                    <option value="4">4 days max</option>
-                    <option value="5">5 days max</option>
-                    <option value="7">7 days max</option>
-                    <option value="14">14 days max</option>
-                  </select>
-                </div>
-              )}
+              <div className="filter-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={flexibleDates}
+                    onChange={(e) => {
+                      console.log("🔍 Flexible dates checkbox changed to:", e.target.checked);
+                      setFlexibleDates(e.target.checked);
+                      if (e.target.checked) {
+                        console.log("🔍 Clearing date fields");
+                        setCheckInDate('');
+                        setCheckOutDate('');
+                      } else {
+                        // When unchecking flexible dates, reset to home state
+                        console.log("🔍 Resetting to home state");
+                        setSearchPerformed(false);
+                        setExactMatches([]);
+                        setShowListingFallback(false);
+                      }
+                    }}
+                    style={{ margin: 0 }}
+                  />
+                  🌟 Flexible Dates - Show All Availability
+                </label>
+              </div>
+
+              {/* Remove the maximum stay days filter - no longer needed */}
             </div>
             
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button 
-                onClick={searchExactMatches}
+                onClick={() => {
+                  console.log("🔍 === BUTTON CLICKED ===");
+                  console.log("🔍 Button clicked with flexibleDates:", flexibleDates);
+                  
+                  // Put the logic directly here to bypass function reference issues
+                  if (flexibleDates) {
+                    console.log("✅ Flexible dates enabled, showing all availability");
+                    const filtered = filterAvailability();
+                    console.log("🔍 Filtered results:", filtered);
+                    setExactMatches(filtered);
+                    setSearchPerformed(true);
+                    setShowListingFallback(false);
+                    console.log("✅ Flexible search completed successfully");
+                  } else {
+                    // Call the search function for exact dates
+                    if (!checkInDate || !checkOutDate) {
+                      alert("Please select both check-in and check-out dates, or check 'Flexible Dates' to see all availability");
+                      return;
+                    }
+                    searchExactMatches();
+                  }
+                }}
                 className="search-button"
               >
-                Search Exact Dates
+                {flexibleDates ? 'Browse All Availability' : 'Search'}
               </button>
             </div>
           </section>
@@ -759,56 +761,76 @@ const searchExactMatches = () => {
               <>
                 <h3 className="results-title">Search for Available Accommodations</h3>
                 <div className="search-prompt">
-                  <p>Please select your check-in and check-out dates above, then click "Search Exact Dates" to find available accommodations.</p>
+                  <p>
+                    {flexibleDates 
+                      ? "Click 'Browse All Availability' to see all available accommodations with your selected filters."
+                      : "Please select your check-in and check-out dates above, then click 'Search Exact Dates' to find available accommodations."
+                    }
+                  </p>
                 </div>
               </>
             ) : (
               <>
                 {exactMatches.length > 0 ? (
                   <>
-                    <h3 className="results-title">Perfect Matches for Your Dates ({exactMatches.length})</h3>
-                    <div className="exact-matches-list">
-                      {exactMatches.map((availability, index) => (
-                        <div key={index} className="match-card">
-                          <div className="match-header">
-                            <h4>{availability.resort}</h4>
-                            <div className="match-price">{calculateExactCost(availability)}</div>
+                    <h3 className="results-title">
+                      {flexibleDates 
+                        ? `Available Accommodations (${exactMatches.length})` 
+                        : `Perfect Matches for Your Dates (${exactMatches.length})`
+                      }
+                    </h3>
+                    {flexibleDates ? (
+                      <ListingView 
+                        availabilityData={exactMatches}
+                        onBooking={handleBooking}
+                      />
+                    ) : (
+                      <div className="exact-matches-list">
+                        {exactMatches.map((availability, index) => (
+                          <div key={index} className="match-card">
+                            <div className="match-header">
+                              <h4>{availability.resort}</h4>
+                              <div className="match-price">{calculateExactCost(availability)}</div>
+                            </div>
+                            <div className="match-details">
+                              <p><strong>Unit Type:</strong> {availability.unitType}</p>
+                              <p><strong>Your Dates:</strong> {checkInDate} to {checkOutDate}</p>
+                              <p><strong>Duration:</strong> {Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24))} nights</p>
+                              {availability.link && (
+                                <a href={availability.link} target="_blank" rel="noopener noreferrer" className="airbnb-link">
+                                  View Property Details
+                                </a>
+                              )}
+                            </div>
+                            <button 
+                              onClick={() => handleDirectBooking(availability)}
+                              className="book-button"
+                            >
+                              Book These Dates
+                            </button>
                           </div>
-                          <div className="match-details">
-                            <p><strong>Unit Type:</strong> {availability.unitType}</p>
-                            <p><strong>Your Dates:</strong> {checkInDate} to {checkOutDate}</p>
-                            <p><strong>Duration:</strong> {Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24))} nights</p>
-                            {availability.link && (
-                              <a href={availability.link} target="_blank" rel="noopener noreferrer" className="airbnb-link">
-                                View Property Details
-                              </a>
-                            )}
-                          </div>
-                          <button 
-                            onClick={() => handleDirectBooking(availability)}
-                            className="book-button"
-                          >
-                            Book These Dates
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
-                    <h3 className="results-title">No Exact Matches Found</h3>
+                    <h3 className="results-title">
+                      {flexibleDates ? 'No Availability Found' : 'No Exact Matches Found'}
+                    </h3>
                     <div className="no-exact-matches">
-                      <p>There is no availability for that {unitType || 'unit type'}, {resort || 'resort'}, and dates ({checkInDate} to {checkOutDate}).</p>
+                      <p>
+                        {flexibleDates 
+                          ? `No availability found matching your selected filters.`
+                          : `There is no availability for that ${unitType || 'unit type'}, ${resort || 'resort'}, and dates (${checkInDate} to ${checkOutDate}).`
+                        }
+                      </p>
                     </div>
                     
-                    <div className="calendar-filter-prompt">
-                      <p>Please select your maximum stay days above to see a calendar view of the availability for your desired unit and resort type in the surrounding months.</p>
-                    </div>
-                    
-                    {(maxStayDays) && (
+                    {!flexibleDates && (
                       <>
-                        <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Alternative Dates Available:</h4>
-                        <CalendarView 
+                        <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Alternative Availability for Your Selected Filters:</h4>
+                        <ListingView 
                           availabilityData={filteredAvailability.filter(item => {
                             let matches = true;
                             if (resort) matches = matches && item.resort === resort;

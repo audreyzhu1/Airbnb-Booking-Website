@@ -11,8 +11,8 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: "v4", auth });
 
-const SPREADSHEET_ID = "13loNnamIaSp7EciX_ONrblWvcaGAmUhj1EEVg71QAdA";
-const RANGE = "Main!A2:L";
+const SPREADSHEET_ID = "1-geh1K6OxDVs97XZaoZ4DIdA6maC-FNpoX3vlwSHxb0";
+const RANGE = "Sheet1!A2:L";
 
 function parseDateRange(range) {
   const [start, end] = range.split("-");

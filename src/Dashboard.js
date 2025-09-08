@@ -42,7 +42,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:4000/api/availability");
+        const res = await fetch("https://worldmark-backend-production.up.railway.app/api/availability");
         const json = await res.json();
         console.log("🔍 Raw data from API:", json);
         setData(json);

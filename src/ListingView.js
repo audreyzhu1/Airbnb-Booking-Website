@@ -7,16 +7,26 @@ export default function ListingView({ availabilityData, onBooking }) {
   const [checkOutDate, setCheckOutDate] = useState('');
   const [selectedNights, setSelectedNights] = useState('');
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
+  // Parse dateRange like "9/23-9/25" into start and end dates
+  const parseDateRange = (dateRange) => {
+    if (!dateRange || !dateRange.includes('-')) return { start: null, end: null };
+    
+    const [startPart, endPart] = dateRange.split('-');
+    const year = new Date().getFullYear();
+    
+    // Parse "9/23" as September 23
+    const [startMonth, startDay] = startPart.split('/');
+    const [endMonth, endDay] = endPart.split('/');
+    
+    const startDate = new Date(year, parseInt(startMonth) - 1, parseInt(startDay));
+    const endDate = new Date(year, parseInt(endMonth) - 1, parseInt(endDay));
+    
+    return { start: startDate, end: endDate };
   };
 
   const formatDateInput = (date) => {
-    return new Date(date).toISOString().split('T')[0];
+    if (!date) return '';
+    return date.toISOString().split('T')[0];
   };
 
   const calculateNights = (checkIn, checkOut) => {
@@ -28,7 +38,6 @@ export default function ListingView({ availabilityData, onBooking }) {
 
   const handlePeriodSelect = (period) => {
     setSelectedPeriod(period);
-    // Clear previous selections when opening modal
     setCheckInDate('');
     setCheckOutDate('');
     setSelectedNights('');
@@ -42,34 +51,28 @@ export default function ListingView({ availabilityData, onBooking }) {
   };
 
   const handleCheckInChange = (date) => {
-    console.log("Check-in date changed:", date);
     setCheckInDate(date);
     if (checkOutDate) {
       const nights = calculateNights(date, checkOutDate);
       setSelectedNights(nights.toString());
-      console.log("Updated nights:", nights);
     }
   };
 
   const handleCheckOutChange = (date) => {
-    console.log("Check-out date changed:", date);
     setCheckOutDate(date);
     if (checkInDate) {
       const nights = calculateNights(checkInDate, date);
       setSelectedNights(nights.toString());
-      console.log("Updated nights:", nights);
     }
   };
 
   const handleNightsChange = (nights) => {
-    console.log("Nights changed:", nights);
     setSelectedNights(nights);
     if (checkInDate && nights) {
       const start = new Date(checkInDate);
       const end = new Date(start);
       end.setDate(start.getDate() + parseInt(nights));
       const newCheckOut = formatDateInput(end);
-      console.log("Calculated new check-out:", newCheckOut);
       setCheckOutDate(newCheckOut);
     }
   };
@@ -78,73 +81,37 @@ export default function ListingView({ availabilityData, onBooking }) {
     if (!selectedPeriod || !checkInDate || !checkOutDate) return false;
     
     const nights = calculateNights(checkInDate, checkOutDate);
+    const { start: availStart, end: availEnd } = parseDateRange(selectedPeriod.dateRange);
     
-    // Parse dates as YYYY-MM-DD strings directly to avoid timezone issues
-    const checkInStr = checkInDate; // Already in YYYY-MM-DD format
-    const checkOutStr = checkOutDate; // Already in YYYY-MM-DD format
+    if (!availStart || !availEnd) return false;
     
-    // Get available period dates and format them consistently
-    const availStart = new Date(selectedPeriod.startDate);
-    const availEnd = new Date(selectedPeriod.endDate);
+    const checkInDateObj = new Date(checkInDate);
+    const checkOutDateObj = new Date(checkOutDate);
     
-    const availStartStr = availStart.getFullYear() + '-' + 
-      String(availStart.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(availStart.getDate()).padStart(2, '0');
-    const availEndStr = availEnd.getFullYear() + '-' + 
-      String(availEnd.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(availEnd.getDate()).padStart(2, '0');
-    
-    console.log("Validation check (string comparison):");
-    console.log("Check-in:", checkInStr);
-    console.log("Check-out:", checkOutStr);
-    console.log("Available start:", availStartStr);
-    console.log("Available end:", availEndStr);
-    
-    // Use string comparison to avoid date parsing issues
-    if (checkInStr < availStartStr || checkInStr > availEndStr) {
-      console.log("Check-in date outside available period");
-      return false;
-    }
-    
-    if (checkOutStr < availStartStr || checkOutStr > availEndStr) {
-      console.log("Check-out date outside available period");
-      return false;
-    }
+    // Check if dates are within available period
+    if (checkInDateObj < availStart || checkInDateObj > availEnd) return false;
+    if (checkOutDateObj < availStart || checkOutDateObj > availEnd) return false;
     
     // Check minimum stay requirement
-    if (nights < selectedPeriod.minStayDays) {
-      console.log("Doesn't meet minimum stay requirement");
-      return false;
-    }
+    if (nights < selectedPeriod.minStayDays) return false;
     
     // Check if check-out is after check-in
-    if (checkOutStr <= checkInStr) {
-      console.log("Check-out not after check-in");
-      return false;
-    }
+    if (checkOutDateObj <= checkInDateObj) return false;
     
-    console.log("Valid selection");
     return true;
   };
 
   const handleBooking = () => {
-    console.log("Booking attempt with:");
-    console.log("checkInDate:", checkInDate);
-    console.log("checkOutDate:", checkOutDate);
-    console.log("selectedPeriod:", selectedPeriod);
-    
     if (!isValidSelection()) {
       alert('Please select valid dates within the available period that meet the minimum stay requirement.');
       return;
     }
 
-    // Create Date objects directly from the input strings (YYYY-MM-DD format)
     const selectedDates = {
-      start: new Date(checkInDate + 'T12:00:00'), // Add time to avoid timezone issues
+      start: new Date(checkInDate + 'T12:00:00'),
       end: new Date(checkOutDate + 'T12:00:00')
     };
 
-    console.log("Passing to onBooking:", selectedDates);
     onBooking(selectedDates, selectedPeriod);
   };
 
@@ -160,10 +127,22 @@ export default function ListingView({ availabilityData, onBooking }) {
   };
 
   const getMaxDate = (period) => {
-    const endDate = new Date(period.endDate);
-    // Subtract minimum stay to ensure we don't allow selections that would extend beyond the period
-    endDate.setDate(endDate.getDate() - period.minStayDays + 1);
-    return formatDateInput(endDate);
+    const { end: availEnd } = parseDateRange(period.dateRange);
+    if (!availEnd) return '';
+    
+    const maxDate = new Date(availEnd);
+    maxDate.setDate(maxDate.getDate() - period.minStayDays + 1);
+    return formatDateInput(maxDate);
+  };
+
+  const getMinDate = (period) => {
+    const { start: availStart } = parseDateRange(period.dateRange);
+    return availStart ? formatDateInput(availStart) : '';
+  };
+
+  const getMaxCheckoutDate = (period) => {
+    const { end: availEnd } = parseDateRange(period.dateRange);
+    return availEnd ? formatDateInput(availEnd) : '';
   };
 
   return (
@@ -239,7 +218,7 @@ export default function ListingView({ availabilityData, onBooking }) {
                   type="date"
                   value={checkInDate}
                   onChange={(e) => handleCheckInChange(e.target.value)}
-                  min={formatDateInput(selectedPeriod.startDate)}
+                  min={getMinDate(selectedPeriod)}
                   max={getMaxDate(selectedPeriod)}
                   className="date-input"
                 />
@@ -255,10 +234,15 @@ export default function ListingView({ availabilityData, onBooking }) {
                 >
                   <option value="">Select nights</option>
                   {Array.from({ length: 15 }, (_, i) => selectedPeriod.minStayDays + i)
-                    .filter(nights => checkInDate ? 
-                      new Date(checkInDate).getTime() + (nights * 24 * 60 * 60 * 1000) <= new Date(selectedPeriod.endDate).getTime()
-                      : true
-                    )
+                    .filter(nights => {
+                      if (!checkInDate) return true;
+                      const { end: availEnd } = parseDateRange(selectedPeriod.dateRange);
+                      if (!availEnd) return true;
+                      
+                      const checkoutDate = new Date(checkInDate);
+                      checkoutDate.setDate(checkoutDate.getDate() + nights);
+                      return checkoutDate <= availEnd;
+                    })
                     .map(nights => (
                       <option key={nights} value={nights}>
                         {nights} night{nights !== 1 ? 's' : ''}
@@ -274,8 +258,12 @@ export default function ListingView({ availabilityData, onBooking }) {
                   type="date"
                   value={checkOutDate}
                   onChange={(e) => handleCheckOutChange(e.target.value)}
-                  min={checkInDate ? formatDateInput(new Date(new Date(checkInDate).getTime() + (selectedPeriod.minStayDays * 24 * 60 * 60 * 1000))) : ''}
-                  max={formatDateInput(selectedPeriod.endDate)}
+                  min={checkInDate ? (() => {
+                    const minCheckout = new Date(checkInDate);
+                    minCheckout.setDate(minCheckout.getDate() + selectedPeriod.minStayDays);
+                    return formatDateInput(minCheckout);
+                  })() : ''}
+                  max={getMaxCheckoutDate(selectedPeriod)}
                   className="date-input"
                   disabled={!checkInDate}
                 />
@@ -324,38 +312,23 @@ export default function ListingView({ availabilityData, onBooking }) {
                 {(() => {
                   const nights = calculateNights(checkInDate, checkOutDate);
                   
-                  // Use the same string comparison logic as validation
-                  const checkInStr = checkInDate;
-                  const checkOutStr = checkOutDate;
-                  
-                  const availStart = new Date(selectedPeriod.startDate);
-                  const availEnd = new Date(selectedPeriod.endDate);
-                  
-                  const availStartStr = availStart.getFullYear() + '-' + 
-                    String(availStart.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(availStart.getDate()).padStart(2, '0');
-                  const availEndStr = availEnd.getFullYear() + '-' + 
-                    String(availEnd.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(availEnd.getDate()).padStart(2, '0');
-                  
-                  if (checkInStr < availStartStr) {
-                    return `Check-in date must be within available period: ${selectedPeriod.dateRange}`;
-                  }
-                  if (checkInStr > availEndStr) {
-                    return `Check-in date must be within available period: ${selectedPeriod.dateRange}`;
-                  }
-                  if (checkOutStr > availEndStr) {
-                    return `Check-out date must be within available period: ${selectedPeriod.dateRange}`;
-                  }
-                  if (checkOutStr < availStartStr) {
-                    return `Check-out date must be within available period: ${selectedPeriod.dateRange}`;
-                  }
                   if (nights < selectedPeriod.minStayDays) {
                     return `Minimum stay is ${selectedPeriod.minStayDays} nights`;
                   }
-                  if (checkOutStr <= checkInStr) {
+                  
+                  const { start: availStart, end: availEnd } = parseDateRange(selectedPeriod.dateRange);
+                  const checkInDateObj = new Date(checkInDate);
+                  const checkOutDateObj = new Date(checkOutDate);
+                  
+                  if (checkInDateObj < availStart || checkInDateObj > availEnd || 
+                      checkOutDateObj < availStart || checkOutDateObj > availEnd) {
+                    return `Dates must be within available period: ${selectedPeriod.dateRange}`;
+                  }
+                  
+                  if (checkOutDateObj <= checkInDateObj) {
                     return 'Check-out must be after check-in date';
                   }
+                  
                   return 'Please select valid dates within the available period';
                 })()}
               </p>

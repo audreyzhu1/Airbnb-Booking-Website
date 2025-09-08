@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import ListingView from './ListingView';  // Changed from CalendarView to ListingView
+import ListingView from './ListingView';
 import ChatInterface from './ChatInterface';
 import './Dashboard.css';
 
@@ -10,7 +10,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   const [unitType, setUnitType] = useState("");
   const [guests, setGuests] = useState("");
   const [minStayDays, setMinStayDays] = useState("");
-  const [maxStayDays, setMaxStayDays] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
@@ -21,7 +20,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   const [unitTypeOptions, setUnitTypeOptions] = useState([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [exactMatches, setExactMatches] = useState([]);
-  const [showListingFallback, setShowListingFallback] = useState(false); // Changed from showCalendarFallback
+  const [showListingFallback, setShowListingFallback] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,64 +43,25 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
         setLoading(true);
         const res = await fetch("https://worldmark-backend-production.up.railway.app/api/availability");
         const json = await res.json();
-        console.log("🔍 Raw data from API:", json);
+        console.log("Raw data from API:", json);
         setData(json);
-        
-        // ADD DEBUG CODE HERE - RIGHT AFTER GETTING RAW DATA
-        console.log("🔍 TOTAL RAW ENTRIES:", json.length);
-        
-        // Check if August dates are in raw data
-        const augustEntries = json.filter(item => {
-          const dateRange = item.dateRange || item['Date Range'];
-          return dateRange && dateRange.includes('8/');
-        });
-        console.log("🔍 AUGUST ENTRIES IN RAW DATA:", augustEntries.length);
-        console.log("🔍 August entries:", augustEntries);
-        
-        // Check what date ranges we have
-        const allDateRanges = json.map(item => item.dateRange).filter(Boolean);
-        console.log("🔍 ALL DATE RANGES:", allDateRanges);
-        
-        // Check cancel-by dates for August entries
-        console.log("🔍 CANCEL-BY DATE CHECK:");
-        const currentDate = new Date();
-        augustEntries.forEach((item, index) => {
-          const cancelDate = new Date(item.cancelByDate);
-          console.log(`August entry ${index}: Cancel by ${cancelDate}, Still valid: ${cancelDate > currentDate}`);
-        });
         
         // Extract unique resorts and unit types
         const resorts = [...new Set(json.map(item => item.resort))];
         const unitTypes = [...new Set(json.map(item => item.unitType))];
         
-        console.log("🔍 Extracted resorts:", resorts);
-        console.log("🔍 Extracted unit types:", unitTypes);
+        console.log("Extracted resorts:", resorts);
+        console.log("Extracted unit types:", unitTypes);
         
         setResortOptions(resorts);
         setUnitTypeOptions(unitTypes);
         
         // Process and merge overlapping bookings, then filter out booked dates
         const processed = processBookingData(json);
-        console.log("🔍 Processed data:", processed);
-        
-        // CHECK AUGUST ENTRIES AFTER PROCESSING
-        const augustAfterProcessing = processed.filter(item => {
-          const dateRange = item.dateRange;
-          return dateRange && dateRange.includes('8/');
-        });
-        console.log("🔍 AUGUST ENTRIES AFTER PROCESSING:", augustAfterProcessing.length);
-        console.log("🔍 August after processing:", augustAfterProcessing);
+        console.log("Processed data:", processed);
         
         const filtered = filterBookedDates(processed, userBookings);
-        console.log("🔍 Filtered data (after removing booked dates):", filtered);
-        
-        // CHECK AUGUST ENTRIES AFTER FILTERING BOOKED DATES
-        const augustAfterFiltering = filtered.filter(item => {
-          const dateRange = item.dateRange;
-          return dateRange && dateRange.includes('8/');
-        });
-        console.log("🔍 AUGUST ENTRIES AFTER FILTERING BOOKED DATES:", augustAfterFiltering.length);
-        console.log("🔍 August after filtering:", augustAfterFiltering);
+        console.log("Filtered data (after removing booked dates):", filtered);
         
         setMergedAvailability(filtered);
         
@@ -133,7 +93,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       return false;
     });
 
-    console.log("🔍 Active bookings:", activeBookings);
+    console.log("Active bookings:", activeBookings);
 
     return availabilityData.map(availability => {
       // Find bookings that affect this specific availability slot
@@ -149,7 +109,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       const allBookedDates = conflictingBookings.flatMap(booking => booking.bookedDates);
       const bookedDateSet = new Set(allBookedDates);
 
-      console.log("🔍 Booked dates for availability", availability.availabilityId, ":", allBookedDates);
+      console.log("Booked dates for availability", availability.availabilityId, ":", allBookedDates);
 
       // Check if there are any booked dates that overlap with this availability
       const availabilityDates = getDateRange(availability.startDate, availability.endDate);
@@ -178,13 +138,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     return dates;
   };
 
-  // Helper function to determine unit count (could be enhanced based on your data)
-  const getUnitCount = (availability) => {
-    // You might want to add this to your Google Sheets data
-    // For now, assume 1 unit per availability slot unless specified
-    return availability.unitCount || 1;
-  };
-
   // Search for exact matches based on check-in/check-out dates
   const searchExactMatches = () => {
     if (!checkInDate || !checkOutDate) {
@@ -208,7 +161,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
 
     const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
     
-    console.log("🔍 Searching for matches:");
+    console.log("Searching for matches:");
     console.log("Check-in:", checkInDate, "->", checkIn);
     console.log("Check-out:", checkOutDate, "->", checkOut);
     console.log("Nights:", nights);
@@ -216,42 +169,42 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     
     // Find availabilities that contain the requested date range
     let matches = mergedAvailability.filter(availability => {
-      console.log("🔍 RAW AVAILABILITY OBJECT:", availability);
-      console.log("🔍 startDate:", availability.startDate, "type:", typeof availability.startDate);
-      console.log("🔍 endDate:", availability.endDate, "type:", typeof availability.endDate);
-      console.log("🔍 dateRange:", availability.dateRange);
+      console.log("RAW AVAILABILITY OBJECT:", availability);
+      console.log("startDate:", availability.startDate, "type:", typeof availability.startDate);
+      console.log("endDate:", availability.endDate, "type:", typeof availability.endDate);
+      console.log("dateRange:", availability.dateRange);
       
       let availStart, availEnd;
       
       // Parse availability dates (they're in ISO format like "2025-08-16T07:00:00.000Z")
       if (availability.startDate && availability.endDate) {
-        console.log("🔍 Using startDate and endDate fields");
+        console.log("Using startDate and endDate fields");
         
         // Handle ISO format dates
         const parseISODate = (isoString) => {
-          console.log("🔍 Parsing ISO date:", isoString);
+          console.log("Parsing ISO date:", isoString);
           const date = new Date(isoString);
-          console.log("🔍 Parsed to:", date);
+          console.log("Parsed to:", date);
           // Convert to local date (strip time and timezone)
           const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-          console.log("🔍 Local date:", localDate);
+          console.log("Local date:", localDate);
           return localDate;
         };
         
         availStart = parseISODate(availability.startDate);
         availEnd = parseISODate(availability.endDate);
       } else if (availability.dateRange) {
-        console.log("🔍 Using dateRange field");
+        console.log("Using dateRange field");
         // Parse from dateRange like "8/16-8/23"
         const [startPart, endPart] = availability.dateRange.split('-');
-        console.log("🔍 Parsing from dateRange:", startPart, "to", endPart);
+        console.log("Parsing from dateRange:", startPart, "to", endPart);
         
         // Add current year if not present
         const currentYear = new Date().getFullYear();
         const startWithYear = `${startPart}/${currentYear}`;
         const endWithYear = `${endPart}/${currentYear}`;
         
-        console.log("🔍 With year added:", startWithYear, "to", endWithYear);
+        console.log("With year added:", startWithYear, "to", endWithYear);
         
         // Parse as M/D/YYYY
         const parseMMDDYYYY = (dateStr) => {
@@ -262,11 +215,11 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
         availStart = parseMMDDYYYY(startWithYear);
         availEnd = parseMMDDYYYY(endWithYear);
       } else {
-        console.log("🔍 No valid date fields found!");
+        console.log("No valid date fields found!");
         return false;
       }
       
-      console.log("🔍 Final parsed dates:", availStart, "to", availEnd);
+      console.log("Final parsed dates:", availStart, "to", availEnd);
       
       console.log(`Checking ${availability.resort} ${availability.unitType}:`);
       console.log(`  Available: ${availStart.toDateString()} to ${availEnd.toDateString()}`);
@@ -286,16 +239,16 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       return result;
     });
 
-    console.log("🔍 Raw matches found:", matches);
+    console.log("Raw matches found:", matches);
 
     // Apply additional filters if specified
     if (resort) {
       matches = matches.filter(item => item.resort === resort);
-      console.log("🔍 After resort filter:", matches);
+      console.log("After resort filter:", matches);
     }
     if (unitType) {
       matches = matches.filter(item => item.unitType.includes(unitType));
-      console.log("🔍 After unit type filter:", matches);
+      console.log("After unit type filter:", matches);
     }
     if (guests) {
       matches = matches.filter(item => {
@@ -306,26 +259,18 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
         if (guestCount === 1) return true;
         return false;
       });
-      console.log("🔍 After guests filter:", matches);
+      console.log("After guests filter:", matches);
     }
 
-    console.log("🔍 Final matches:", matches);
+    console.log("Final matches:", matches);
     setExactMatches(matches);
     setSearchPerformed(true);
     
     if (matches.length === 0) {
-      setShowListingFallback(true); // Changed from setShowCalendarFallback
+      setShowListingFallback(true);
     } else {
-      setShowListingFallback(false); // Changed from setShowCalendarFallback
+      setShowListingFallback(false);
     }
-  };
-
-  const resetSearch = () => {
-    setSearchPerformed(false);
-    setExactMatches([]);
-    setShowListingFallback(false); // Changed from setShowCalendarFallback
-    setCheckInDate("");
-    setCheckOutDate("");
   };
 
   const calculateExactCost = (availability) => {
@@ -368,7 +313,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     const groupedByAccountAndUnit = {};
     
     rawData.forEach((booking, index) => {
-      const account = booking.status; // This maps to your "Accou" column
+      const account = booking.status; // This maps to your "Account" column
       const unitKey = `${account}_${booking.resort}_${booking.unitType}`;
       
       if (!groupedByAccountAndUnit[unitKey]) {
@@ -532,6 +477,14 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
 
   console.log("Current activeTab:", activeTab);
 
+  if (loading) {
+    return (
+      <div className="dashboard-container">
+        <div className="loading-message">Loading available units...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
@@ -629,8 +582,8 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
                   className="form-select"
                 >
                   <option value="">All Resorts</option>
-                  {resortOptions.map((resort, index) => (
-                    <option key={index} value={resort}>{resort}</option>
+                  {resortOptions.map((resortOption, index) => (
+                    <option key={index} value={resortOption}>{resortOption}</option>
                   ))}
                 </select>
               </div>
@@ -702,15 +655,15 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
                     type="checkbox"
                     checked={flexibleDates}
                     onChange={(e) => {
-                      console.log("🔍 Flexible dates checkbox changed to:", e.target.checked);
+                      console.log("Flexible dates checkbox changed to:", e.target.checked);
                       setFlexibleDates(e.target.checked);
                       if (e.target.checked) {
-                        console.log("🔍 Clearing date fields");
+                        console.log("Clearing date fields");
                         setCheckInDate('');
                         setCheckOutDate('');
                       } else {
                         // When unchecking flexible dates, reset to home state
-                        console.log("🔍 Resetting to home state");
+                        console.log("Resetting to home state");
                         setSearchPerformed(false);
                         setExactMatches([]);
                         setShowListingFallback(false);
@@ -718,28 +671,26 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
                     }}
                     style={{ margin: 0 }}
                   />
-                  🌟 Flexible Dates - Show All Availability
+                  Flexible Dates - Show All Availability
                 </label>
               </div>
-
-              {/* Remove the maximum stay days filter - no longer needed */}
             </div>
             
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button 
                 onClick={() => {
-                  console.log("🔍 === BUTTON CLICKED ===");
-                  console.log("🔍 Button clicked with flexibleDates:", flexibleDates);
+                  console.log("=== BUTTON CLICKED ===");
+                  console.log("Button clicked with flexibleDates:", flexibleDates);
                   
                   // Put the logic directly here to bypass function reference issues
                   if (flexibleDates) {
-                    console.log("✅ Flexible dates enabled, showing all availability");
+                    console.log("Flexible dates enabled, showing all availability");
                     const filtered = filterAvailability();
-                    console.log("🔍 Filtered results:", filtered);
+                    console.log("Filtered results:", filtered);
                     setExactMatches(filtered);
                     setSearchPerformed(true);
                     setShowListingFallback(false);
-                    console.log("✅ Flexible search completed successfully");
+                    console.log("Flexible search completed successfully");
                   } else {
                     // Call the search function for exact dates
                     if (!checkInDate || !checkOutDate) {

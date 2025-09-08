@@ -48,8 +48,9 @@ function parseDateRange(range) {
   
   const format = (dateStr) => {
     const [month, day] = dateStr.split("/");
-    // Create date at noon local time to avoid timezone shifts
-    return new Date(year, parseInt(month) - 1, parseInt(day), 12, 0, 0);
+    // Create date string in YYYY-MM-DD format and parse as local date
+    const dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    return new Date(dateString + 'T00:00:00'); // Force local timezone
   };
   
   return {

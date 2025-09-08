@@ -45,11 +45,13 @@ function parseDateRange(range) {
   
   const [start, end] = range.split("-");
   const year = "2025";
+  
   const format = (dateStr) => {
     const [month, day] = dateStr.split("/");
-    // Make sure we're creating dates at midnight local time
-    return new Date(year, parseInt(month) - 1, parseInt(day));
+    // Create date at noon local time to avoid timezone shifts
+    return new Date(year, parseInt(month) - 1, parseInt(day), 12, 0, 0);
   };
+  
   return {
     startDate: format(start),
     endDate: format(end),

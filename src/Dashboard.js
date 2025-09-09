@@ -1,55 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from 'react-router-dom';
-import ListingView from './ListingView';
-import ChatInterface from './ChatInterface';
+import CalendarView from './CalendarView';
 import './Dashboard.css';
 
-export default function Dashboard({ user, setBookingData, userBookings }) {
-  const [activeTab, setActiveTab] = useState('home');
+export default function Dashboard({ user, setBookingData }) {
   const [resort, setResort] = useState("");
   const [unitType, setUnitType] = useState("");
   const [guests, setGuests] = useState("");
-  const [minStayDays, setMinStayDays] = useState("");
-  const [checkInDate, setCheckInDate] = useState("");
-  const [checkOutDate, setCheckOutDate] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
-  const [mergedAvailability, setMergedAvailability] = useState([]);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [resortOptions, setResortOptions] = useState([]);
   const [unitTypeOptions, setUnitTypeOptions] = useState([]);
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [exactMatches, setExactMatches] = useState([]);
-  const [showListingFallback, setShowListingFallback] = useState(false);
+  const [activeTab, setActiveTab] = useState('home');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Parse dateRange like "9/23-9/25" into start and end dates
-  const parseDateRange = (dateRange) => {
-    if (!dateRange || !dateRange.includes('-')) return { start: null, end: null };
-    
-    const [startPart, endPart] = dateRange.split('-');
-    const year = new Date().getFullYear();
-    
-    // Parse "9/23" as September 23
-    const [startMonth, startDay] = startPart.split('/');
-    const [endMonth, endDay] = endPart.split('/');
-    
-    const startDate = new Date(year, parseInt(startMonth) - 1, parseInt(startDay));
-    const endDate = new Date(year, parseInt(endMonth) - 1, parseInt(endDay));
-    
-    return { start: startDate, end: endDate };
-  };
-
-  // Set activeTab based on current URL when component mounts or URL changes
+  // Set active tab based on current route
   useEffect(() => {
-    console.log("Current pathname:", location.pathname);
-    if (location.pathname === '/messages') {
-      console.log("Setting activeTab to messages");
-      setActiveTab('messages');
-    } else {
-      console.log("Setting activeTab to home");
+    const pathname = location.pathname;
+    console.log('Current pathname:', pathname);
+    
+    if (pathname === '/dashboard') {
       setActiveTab('home');
+      console.log('Setting activeTab to home');
     }
   }, [location.pathname]);
 
@@ -57,28 +36,20 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     async function fetchData() {
       try {
         setLoading(true);
-        const res = await fetch("https://worldmark-backend-production.up.railway.app/api/availability");
+        const res = await fetch("http://localhost:4000/api/availability");
         const json = await res.json();
-        console.log("Raw data from API:", json);
+        console.log('Raw data from API:', json);
+        setData(json);
         
         // Extract unique resorts and unit types
         const resorts = [...new Set(json.map(item => item.resort))];
         const unitTypes = [...new Set(json.map(item => item.unitType))];
         
-        console.log("Extracted resorts:", resorts);
-        console.log("Extracted unit types:", unitTypes);
+        console.log('Extracted resorts:', resorts);
+        console.log('Extracted unit types:', unitTypes);
         
         setResortOptions(resorts);
         setUnitTypeOptions(unitTypes);
-        
-        // Since backend only returns raw data now, no need for complex processing
-        // Just add availabilityId for tracking
-        const processedData = json.map((item, index) => ({
-          ...item,
-          availabilityId: `${item.resort}_${item.unitType}_${index}`
-        }));
-        
-        setMergedAvailability(processedData);
         
       } catch (err) {
         console.error("Fetch error:", err);
@@ -87,161 +58,122 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       }
     }
     fetchData();
-  }, [userBookings]);
+  }, []);
 
-  // Search for exact matches based on check-in/check-out dates
-  const searchExactMatches = () => {
-    if (!checkInDate || !checkOutDate) {
-      alert("Please select both check-in and check-out dates");
-      return;
+  // FIXED: Better date parsing that handles timezones correctly
+  const parseAvailabilityDate = (dateString) => {
+    console.log(`Parsing date string: ${dateString}`);
+    
+    if (dateString instanceof Date) {
+      // Already a date object, just ensure it's at midnight local time
+      const localDate = new Date(dateString.getFullYear(), dateString.getMonth(), dateString.getDate());
+      console.log(`Date object converted to local: ${localDate}`);
+      return localDate;
     }
-
-    // Parse dates as local dates to avoid timezone issues
-    const parseLocalDate = (dateString) => {
-      const [year, month, day] = dateString.split('-');
-      return new Date(year, month - 1, day); // month is 0-indexed
-    };
-
-    const checkIn = parseLocalDate(checkInDate);
-    const checkOut = parseLocalDate(checkOutDate);
     
-    if (checkOut <= checkIn) {
-      alert("Check-out date must be after check-in date");
-      return;
-    }
-
-    const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-    
-    console.log("Searching for matches:");
-    console.log("Check-in:", checkInDate, "->", checkIn);
-    console.log("Check-out:", checkOutDate, "->", checkOut);
-    console.log("Nights:", nights);
-    console.log("Available data to search:", mergedAvailability);
-    
-    // Find availabilities that contain the requested date range
-    let matches = mergedAvailability.filter(availability => {
-      console.log("RAW AVAILABILITY OBJECT:", availability);
-      console.log("dateRange:", availability.dateRange);
-      
-      // Only parse from dateRange now
-      if (!availability.dateRange) {
-        console.log("No dateRange found!");
-        return false;
+    if (typeof dateString === 'string') {
+      // Handle ISO strings (from the backend)
+      if (dateString.includes('T') || dateString.includes('Z')) {
+        const parsed = new Date(dateString);
+        // Convert to local midnight to avoid timezone issues
+        const localDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+        console.log(`ISO string ${dateString} converted to local: ${localDate}`);
+        return localDate;
       }
+      
+      // Handle date range strings like "9/23-9/25"
+      if (dateString.includes('/')) {
+        const [month, day] = dateString.split('/');
+        const year = new Date().getFullYear(); // Current year
+        const localDate = new Date(year, parseInt(month) - 1, parseInt(day));
+        console.log(`Date range ${dateString} converted to local: ${localDate}`);
+        return localDate;
+      }
+    }
+    
+    console.warn(`Could not parse date: ${dateString}`);
+    return null;
+  };
 
-      console.log("Using dateRange field:", availability.dateRange);
-      
-      const { start: availStart, end: availEnd } = parseDateRange(availability.dateRange);
-      
+  // FIXED: Improved search logic
+  const handleSearch = () => {
+    console.log('=== BUTTON CLICKED ===');
+    console.log('Button clicked with flexibleDates:', flexibleDates);
+    
+    if (flexibleDates) {
+      setActiveTab('calendar');
+      return;
+    }
+
+    // Validate required fields for specific date search
+    if (!checkIn || !checkOut) {
+      alert('Please select both check-in and check-out dates');
+      return;
+    }
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const requestedNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+    console.log('Searching for matches:');
+    console.log(`Check-in: ${checkIn} -> ${checkInDate}`);
+    console.log(`Check-out: ${checkOut} -> ${checkOutDate}`);
+    console.log(`Nights: ${requestedNights}`);
+
+    // Process the data to remove already booked dates and find matches
+    const processedData = processBookingData(data);
+    console.log('Available data to search:', processedData);
+
+    const matches = processedData.filter(availability => {
+      console.log('RAW AVAILABILITY OBJECT:', availability);
+      console.log(`startDate: ${availability.startDate} type: ${typeof availability.startDate}`);
+      console.log(`endDate: ${availability.endDate} type: ${typeof availability.endDate}`);
+      console.log(`dateRange: ${availability.dateRange}`);
+
+      // Parse availability dates
+      const availStart = parseAvailabilityDate(availability.startDate);
+      const availEnd = parseAvailabilityDate(availability.endDate);
+
       if (!availStart || !availEnd) {
-        console.log("Failed to parse dateRange!");
+        console.log('Could not parse availability dates, skipping');
         return false;
       }
+
+      console.log(`Final parsed dates: ${availStart} to ${availEnd}`);
+
+      // Check if requested dates fall within available dates
+      const datesMatch = checkInDate >= availStart && checkOutDate <= availEnd;
       
-      console.log("Final parsed dates:", availStart, "to", availEnd);
-      
+      // Check minimum stay requirement
+      const minStayMet = requestedNights >= availability.minStayDays;
+
       console.log(`Checking ${availability.resort} ${availability.unitType}:`);
       console.log(`  Available: ${availStart.toDateString()} to ${availEnd.toDateString()}`);
-      console.log(`  Requested: ${checkIn.toDateString()} to ${checkOut.toDateString()}`);
-      
-      // Check if requested dates fall within availability period
-      const datesMatch = checkIn >= availStart && checkOut <= availEnd;
+      console.log(`  Requested: ${checkInDate.toDateString()} to ${checkOutDate.toDateString()}`);
       console.log(`  Dates match: ${datesMatch}`);
-      
-      // Check if meets minimum stay requirement
-      const meetsMinStay = nights >= (availability.minStayDays || 1);
-      console.log(`  Min stay (${availability.minStayDays || 1}): ${meetsMinStay}`);
-      
-      const result = datesMatch && meetsMinStay;
-      console.log(`  Final result: ${result}`);
-      
-      return result;
+      console.log(`  Min stay (${availability.minStayDays}): ${minStayMet}`);
+      console.log(`  Final result: ${datesMatch && minStayMet}`);
+
+      return datesMatch && minStayMet;
     });
 
-    console.log("Raw matches found:", matches);
+    console.log('Raw matches found:', matches);
 
-    // Apply additional filters if specified
+    // Apply additional filters
+    let filteredMatches = [...matches];
+
     if (resort) {
-      matches = matches.filter(item => item.resort === resort);
-      console.log("After resort filter:", matches);
+      filteredMatches = filteredMatches.filter(item => item.resort === resort);
     }
+
+    console.log('After resort filter:', filteredMatches);
+
     if (unitType) {
-      matches = matches.filter(item => item.unitType.includes(unitType));
-      console.log("After unit type filter:", matches);
+      filteredMatches = filteredMatches.filter(item => item.unitType.includes(unitType));
     }
+
     if (guests) {
-      matches = matches.filter(item => {
-        const guestCount = parseInt(guests);
-        if (guestCount <= 2 && item.unitType.includes("1 bedroom")) return true;
-        if (guestCount <= 4 && item.unitType.includes("2 bedroom")) return true;
-        if (guestCount <= 6 && item.unitType.includes("3 bedroom")) return true;
-        if (guestCount === 1) return true;
-        return false;
-      });
-      console.log("After guests filter:", matches);
-    }
-
-    console.log("Final matches:", matches);
-    setExactMatches(matches);
-    setSearchPerformed(true);
-    
-    if (matches.length === 0) {
-      setShowListingFallback(true);
-    } else {
-      setShowListingFallback(false);
-    }
-  };
-
-  const calculateExactCost = (availability) => {
-    if (!checkInDate || !checkOutDate) return availability.cost;
-    
-    const checkIn = new Date(checkInDate);
-    const checkOut = new Date(checkOutDate);
-    const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-    
-    const baseCostStr = availability.cost.replace('$', '').replace(',', '');
-    const baseCost = parseFloat(baseCostStr);
-    const perNightRate = baseCost / availability.nights;
-    return `$${(perNightRate * nights).toFixed(2)}`;
-  };
-
-  const handleDirectBooking = (availability) => {
-    if (!checkInDate || !checkOutDate) {
-      alert("Please select check-in and check-out dates");
-      return;
-    }
-
-    const bookingInfo = {
-      resort: availability.resort,
-      unitType: availability.unitType,
-      checkIn: checkInDate,
-      checkOut: checkOutDate,
-      nights: Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)),
-      cost: calculateExactCost(availability),
-      dateRange: `${new Date(checkInDate).getMonth() + 1}/${new Date(checkInDate).getDate()}-${new Date(checkOutDate).getMonth() + 1}/${new Date(checkOutDate).getDate()}`,
-      availabilityId: availability.availabilityId
-    };
-    
-    setBookingData(bookingInfo);
-    navigate('/booking-confirmation');
-  };
-
-  const filterAvailability = () => {
-    let filtered = [...mergedAvailability];
-
-    // Filter by resort
-    if (resort) {
-      filtered = filtered.filter(item => item.resort === resort);
-    }
-
-    // Filter by unit type
-    if (unitType) {
-      filtered = filtered.filter(item => item.unitType.includes(unitType));
-    }
-
-    // Filter by guests (based on unit capacity)
-    if (guests) {
-      filtered = filtered.filter(item => {
+      filteredMatches = filteredMatches.filter(item => {
         const guestCount = parseInt(guests);
         if (guestCount <= 2 && item.unitType.includes("1 bedroom")) return true;
         if (guestCount <= 4 && item.unitType.includes("2 bedroom")) return true;
@@ -251,17 +183,51 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       });
     }
 
-    // Filter by minimum stay days - only show if user's desired stay is >= property minimum
-    if (minStayDays) {
-      const requestedMinStay = parseInt(minStayDays);
-      filtered = filtered.filter(item => {
-        // User wants at least X days, property requires at least Y days
-        // Show property if user's minimum >= property's minimum
-        return requestedMinStay >= item.minStayDays;
-      });
-    }
+    console.log('Final matches:', filteredMatches);
 
-    return filtered;
+    setSearchResults(filteredMatches);
+    setShowResults(true);
+  };
+
+  // FIXED: Better processing to extract minimum stay days
+  const processBookingData = (rawData) => {
+    const processedData = rawData.map(booking => {
+      // Extract minimum stay from usage field (like "4D" = 4 days)
+      const minStayDays = extractMinStayDays(booking.usage);
+      
+      return {
+        ...booking,
+        minStayDays,
+        // Ensure dates are properly parsed
+        startDate: parseAvailabilityDate(booking.startDate),
+        endDate: parseAvailabilityDate(booking.endDate)
+      };
+    });
+
+    console.log('Processed data:', processedData);
+    
+    // Filter out bookings that are already booked (status indicates booking)
+    const availableData = processedData.filter(booking => {
+      // If the status field contains account codes like 'V', 'A', 'JA', etc., it's booked
+      const isBooked = booking.status && booking.status.trim() !== '' && 
+                      !booking.status.toLowerCase().includes('available') &&
+                      !booking.status.toLowerCase().includes('open');
+      return !isBooked;
+    });
+
+    console.log('Filtered data (after removing booked dates):', availableData);
+    return availableData;
+  };
+
+  const extractMinStayDays = (usage) => {
+    if (!usage) return 1;
+    
+    // Look for patterns like "4D", "3D", "2D" in the usage string
+    const match = usage.match(/(\d+)D/i);
+    const minStay = match ? parseInt(match[1]) : 1;
+    
+    console.log(`Extracted min stay from "${usage}": ${minStay} days`);
+    return minStay;
   };
 
   const handleBooking = (selectedDates, availabilityItem) => {
@@ -272,8 +238,7 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
       checkOut: selectedDates.end.toLocaleDateString(),
       nights: Math.ceil((selectedDates.end - selectedDates.start) / (1000 * 60 * 60 * 24)),
       cost: calculateCost(selectedDates, availabilityItem),
-      dateRange: `${selectedDates.start.getMonth() + 1}/${selectedDates.start.getDate()}-${selectedDates.end.getMonth() + 1}/${selectedDates.end.getDate()}`,
-      availabilityId: availabilityItem.availabilityId // Track which availability slot this came from
+      dateRange: `${selectedDates.start.getMonth() + 1}/${selectedDates.start.getDate()}-${selectedDates.end.getMonth() + 1}/${selectedDates.end.getDate()}`
     };
     
     setBookingData(bookingInfo);
@@ -288,31 +253,83 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     return `$${(perNightRate * nights).toFixed(2)}`;
   };
 
-  // Restore search state when returning from booking confirmation
-  useEffect(() => {
-    if (location.state?.restoreSearch && location.state?.searchState) {
-      const { 
-        resort: savedResort, 
-        unitType: savedUnitType, 
-        guests: savedGuests,
-        minStayDays: savedMinStayDays
-      } = location.state.searchState;
-      
-      setResort(savedResort);
-      setUnitType(savedUnitType);
-      setGuests(savedGuests);
-      setMinStayDays(savedMinStayDays);
+  const handleDirectBooking = (availability) => {
+    if (!checkIn || !checkOut) {
+      alert('Please select check-in and check-out dates first');
+      return;
     }
-  }, [location.state]);
 
-  const filteredAvailability = filterAvailability();
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
-  console.log("Current activeTab:", activeTab);
+    const bookingInfo = {
+      resort: availability.resort,
+      unitType: availability.unitType,
+      checkIn: checkInDate.toLocaleDateString(),
+      checkOut: checkOutDate.toLocaleDateString(),
+      nights,
+      cost: calculateCost({ start: checkInDate, end: checkOutDate }, availability),
+      dateRange: `${checkInDate.getMonth() + 1}/${checkInDate.getDate()}-${checkOutDate.getMonth() + 1}/${checkOutDate.getDate()}`
+    };
+    
+    setBookingData(bookingInfo);
+    navigate('/booking-confirmation');
+  };
 
-  if (loading) {
+  console.log('Current activeTab:', activeTab);
+
+  // Calendar view for flexible dates
+  if (activeTab === 'calendar') {
+    const processedData = processBookingData(data);
     return (
       <div className="dashboard-container">
-        <div className="loading-message">Loading available units...</div>
+        <header className="dashboard-header">
+          <div className="user-welcome">
+            <h2>Welcome, {user?.email}</h2>
+          </div>
+          <nav className="main-nav">
+            <button 
+              onClick={() => setActiveTab('home')}
+              className="nav-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              ← Back to Search
+            </button>
+            <button 
+              onClick={() => navigate('/my-bookings')}
+              className="nav-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              My Bookings
+            </button>
+            <button 
+              onClick={() => navigate('/messages')}
+              className="nav-link"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Messages
+            </button>
+            <a href="/" className="nav-link">Log out</a>
+          </nav>
+        </header>
+
+        <main className="results-section">
+          <h3 className="results-title">Select Your Dates</h3>
+          
+          {loading ? (
+            <div className="loading-message">Loading available units...</div>
+          ) : processedData.length > 0 ? (
+            <CalendarView 
+              availabilityData={processedData}
+              onBooking={handleBooking}
+            />
+          ) : (
+            <div className="no-results">
+              No available units found
+            </div>
+          )}
+        </main>
       </div>
     );
   }
@@ -324,327 +341,201 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
           <h2>Welcome, {user?.email}</h2>
         </div>
         <nav className="main-nav">
+          <span className="nav-link active">Home</span>
           <button 
-            onClick={() => {
-              console.log("Home button clicked");
-              navigate('/dashboard');
-            }}
-            className={`nav-link ${activeTab === 'home' ? 'active' : ''}`}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              textDecoration: 'none',
-              color: activeTab === 'home' ? 'var(--primary)' : 'var(--text-light)',
-              fontWeight: activeTab === 'home' ? '600' : '500',
-              padding: '0.5rem 0',
-              position: 'relative'
-            }}
-          >
-            Home
-          </button>
-          <button 
-            onClick={() => {
-              console.log("My Bookings button clicked");
-              navigate('/my-bookings');
-            }}
+            onClick={() => navigate('/my-bookings')}
             className="nav-link"
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              textDecoration: 'none',
-              color: 'var(--text-light)',
-              fontWeight: '500',
-              padding: '0.5rem 0'
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             My Bookings
           </button>
           <button 
-            onClick={() => {
-              console.log("Messages button clicked");
-              navigate('/messages');
-            }}
-            className={`nav-link ${activeTab === 'messages' ? 'active' : ''}`}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              textDecoration: 'none',
-              color: activeTab === 'messages' ? 'var(--primary)' : 'var(--text-light)',
-              fontWeight: activeTab === 'messages' ? '600' : '500',
-              padding: '0.5rem 0',
-              position: 'relative'
-            }}
+            onClick={() => navigate('/messages')}
+            className="nav-link"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
             Messages
           </button>
-          <button 
-            onClick={() => {
-              console.log("Log out button clicked");
-              navigate('/');
-            }}
-            className="nav-link"
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              textDecoration: 'none',
-              color: 'var(--text-light)',
-              fontWeight: '500',
-              padding: '0.5rem 0'
-            }}
-          >
-            Log out
-          </button>
+          <a href="/" className="nav-link">Log out</a>
         </nav>
       </header>
 
-      {activeTab === 'home' && (
-        <>
-          <section className="search-section">
-            <div className="search-controls">
-              <div className="filter-group">
-                <label htmlFor="resort-select">Resort</label>
-                <select 
-                  id="resort-select"
-                  value={resort}
-                  onChange={(e) => setResort(e.target.value)} 
-                  className="form-select"
-                >
-                  <option value="">All Resorts</option>
-                  {resortOptions.map((resortOption, index) => (
-                    <option key={index} value={resortOption}>{resortOption}</option>
-                  ))}
-                </select>
-              </div>
+      <section className="search-section">
+        <div className="search-controls">
+          <div className="filter-group">
+            <label htmlFor="resort-select">Resort</label>
+            <select 
+              id="resort-select"
+              value={resort}
+              onChange={(e) => setResort(e.target.value)} 
+              className="form-select"
+            >
+              <option value="">All Resorts</option>
+              {resortOptions.map((resort, index) => (
+                <option key={index} value={resort}>{resort}</option>
+              ))}
+            </select>
+          </div>
 
-              <div className="filter-group">
-                <label htmlFor="unit-select">Unit Type</label>
-                <select 
-                  id="unit-select"
-                  value={unitType}
-                  onChange={(e) => setUnitType(e.target.value)} 
-                  className="form-select"
-                >
-                  <option value="">All Unit Types</option>
-                  {unitTypeOptions.map((type, index) => (
-                    <option key={index} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="filter-group">
+            <label htmlFor="unit-select">Unit Type</label>
+            <select 
+              id="unit-select"
+              value={unitType}
+              onChange={(e) => setUnitType(e.target.value)} 
+              className="form-select"
+            >
+              <option value="">All Unit Types</option>
+              {unitTypeOptions.map((type, index) => (
+                <option key={index} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
 
-              <div className="filter-group">
-                <label htmlFor="guests-select">How many guests</label>
-                <select 
-                  id="guests-select"
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)} 
-                  className="form-select"
-                >
-                  <option value="">Any number</option>
-                  <option value="1">1 guest</option>
-                  <option value="2">2 guests</option>
-                  <option value="3">3 guests</option>
-                  <option value="4">4 guests</option>
-                  <option value="5">5 guests</option>
-                  <option value="6">6 guests</option>
-                  <option value="7">7 guests</option>
-                  <option value="8">8+ guests</option>
-                </select>
-              </div>
+          <div className="filter-group">
+            <label htmlFor="guests-select">Number of guests</label>
+            <select 
+              id="guests-select"
+              value={guests}
+              onChange={(e) => setGuests(e.target.value)} 
+              className="form-select"
+            >
+              <option value="">Any number</option>
+              <option value="1">1 guest</option>
+              <option value="2">2 guests</option>
+              <option value="3">3 guests</option>
+              <option value="4">4 guests</option>
+              <option value="5">5 guests</option>
+              <option value="6">6 guests</option>
+              <option value="7">7 guests</option>
+              <option value="8">8+ guests</option>
+            </select>
+          </div>
 
-              <div className="filter-group">
-                <label htmlFor="checkin-date">Check-in Date</label>
-                <input
-                  id="checkin-date"
-                  type="date"
-                  value={checkInDate}
-                  onChange={(e) => setCheckInDate(e.target.value)}
-                  className="form-input"
-                  min={new Date().toISOString().split('T')[0]}
-                  disabled={flexibleDates}
-                />
-              </div>
-
-              <div className="filter-group">
-                <label htmlFor="checkout-date">Check-out Date</label>
-                <input
-                  id="checkout-date"
-                  type="date"
-                  value={checkOutDate}
-                  onChange={(e) => setCheckOutDate(e.target.value)}
-                  className="form-input"
-                  min={checkInDate || new Date().toISOString().split('T')[0]}
-                  disabled={flexibleDates}
-                />
-              </div>
-
-              <div className="filter-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={flexibleDates}
-                    onChange={(e) => {
-                      console.log("Flexible dates checkbox changed to:", e.target.checked);
-                      setFlexibleDates(e.target.checked);
-                      if (e.target.checked) {
-                        console.log("Clearing date fields");
-                        setCheckInDate('');
-                        setCheckOutDate('');
-                      } else {
-                        // When unchecking flexible dates, reset to home state
-                        console.log("Resetting to home state");
-                        setSearchPerformed(false);
-                        setExactMatches([]);
-                        setShowListingFallback(false);
-                      }
-                    }}
-                    style={{ margin: 0 }}
-                  />
-                  Flexible Dates - Show All Availability
-                </label>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-              <button 
-                onClick={() => {
-                  console.log("=== BUTTON CLICKED ===");
-                  console.log("Button clicked with flexibleDates:", flexibleDates);
-                  
-                  // Put the logic directly here to bypass function reference issues
-                  if (flexibleDates) {
-                    console.log("Flexible dates enabled, showing all availability");
-                    const filtered = filterAvailability();
-                    console.log("Filtered results:", filtered);
-                    setExactMatches(filtered);
-                    setSearchPerformed(true);
-                    setShowListingFallback(false);
-                    console.log("Flexible search completed successfully");
+          <div className="filter-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={flexibleDates}
+                onChange={(e) => {
+                  console.log('Flexible dates checkbox changed to:', e.target.checked);
+                  setFlexibleDates(e.target.checked);
+                  if (e.target.checked) {
+                    console.log('Clearing date fields');
+                    setCheckIn('');
+                    setCheckOut('');
                   } else {
-                    // Call the search function for exact dates
-                    if (!checkInDate || !checkOutDate) {
-                      alert("Please select both check-in and check-out dates, or check 'Flexible Dates' to see all availability");
-                      return;
-                    }
-                    searchExactMatches();
+                    console.log('Resetting to home state');
+                    setActiveTab('home');
+                    setShowResults(false);
                   }
                 }}
-                className="search-button"
-              >
-                {flexibleDates ? 'Browse All Availability' : 'Search'}
-              </button>
-            </div>
-          </section>
+                style={{ marginRight: '0.5rem' }}
+              />
+              I have flexible dates
+            </label>
+          </div>
 
-          <main className="results-section">
-            {!searchPerformed ? (
-              <>
-                <h3 className="results-title">Search for Available Accommodations</h3>
-                <div className="search-prompt">
-                  <p>
-                    {flexibleDates 
-                      ? "Click 'Browse All Availability' to see all available accommodations with your selected filters."
-                      : "Please select your check-in and check-out dates above, then click 'Search Exact Dates' to find available accommodations."
-                    }
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                {exactMatches.length > 0 ? (
-                  <>
-                    <h3 className="results-title">
-                      {flexibleDates 
-                        ? `Available Accommodations (${exactMatches.length})` 
-                        : `Perfect Matches for Your Dates (${exactMatches.length})`
-                      }
-                    </h3>
-                    {flexibleDates ? (
-                      <ListingView 
-                        availabilityData={exactMatches}
-                        onBooking={handleBooking}
-                      />
-                    ) : (
-                      <div className="exact-matches-list">
-                        {exactMatches.map((availability, index) => (
-                          <div key={index} className="match-card">
-                            <div className="match-header">
-                              <h4>{availability.resort}</h4>
-                              <div className="match-price">{calculateExactCost(availability)}</div>
-                            </div>
-                            <div className="match-details">
-                              <p><strong>Unit Type:</strong> {availability.unitType}</p>
-                              <p><strong>Your Dates:</strong> {checkInDate} to {checkOutDate}</p>
-                              <p><strong>Duration:</strong> {Math.ceil((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24))} nights</p>
-                              {availability.link && (
-                                <a href={availability.link} target="_blank" rel="noopener noreferrer" className="airbnb-link">
-                                  View Property Details
-                                </a>
-                              )}
-                            </div>
-                            <button 
-                              onClick={() => handleDirectBooking(availability)}
-                              className="book-button"
-                            >
-                              Book These Dates
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <h3 className="results-title">
-                      {flexibleDates ? 'No Availability Found' : 'No Exact Matches Found'}
-                    </h3>
-                    <div className="no-exact-matches">
-                      <p>
-                        {flexibleDates 
-                          ? `No availability found matching your selected filters.`
-                          : `There is no availability for that ${unitType || 'unit type'}, ${resort || 'resort'}, and dates (${checkInDate} to ${checkOutDate}).`
-                        }
-                      </p>
+          {!flexibleDates && (
+            <>
+              <div className="filter-group">
+                <label htmlFor="check-in">Check-in Date</label>
+                <input
+                  id="check-in"
+                  type="date"
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="filter-group">
+                <label htmlFor="check-out">Check-out Date</label>
+                <input
+                  id="check-out"
+                  type="date"
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            </>
+          )}
+
+          <button 
+            onClick={handleSearch}
+            className="search-button"
+          >
+            {flexibleDates ? 'View Calendar' : 'Search Available Units'}
+          </button>
+        </div>
+      </section>
+
+      <main className="results-section">
+        {showResults && searchResults.length > 0 ? (
+          <>
+            <h3 className="results-title">Available Units ({searchResults.length})</h3>
+            <div className="units-grid">
+              {searchResults.map((availability, index) => (
+                <div key={index} className="unit-card">
+                  <div className="unit-image-container">
+                    <img 
+                      src={availability.photo || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=250&fit=crop&q=80'} 
+                      alt={availability.resort}
+                      className="unit-image"
+                    />
+                  </div>
+                  <div className="unit-details">
+                    <h4>{availability.resort}</h4>
+                    <p className="unit-type">{availability.unitType}</p>
+                    
+                    <div className="unit-dates">
+                      Available: {availability.dateRange}
                     </div>
                     
-                    {!flexibleDates && (
-                      <>
-                        <h4 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Alternative Availability for Your Selected Filters:</h4>
-                        <ListingView 
-                          availabilityData={filteredAvailability.filter(item => {
-                            let matches = true;
-                            if (resort) matches = matches && item.resort === resort;
-                            if (unitType) matches = matches && item.unitType.includes(unitType);
-                            return matches;
-                          })}
-                          onBooking={handleBooking}
-                        />
-                      </>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </main>
-        </>
-      )}
-
-      {activeTab === 'messages' && (
-        <div style={{ 
-          height: 'calc(100vh - 120px)', 
-          padding: '2rem',
-          paddingTop: '1rem'
-        }}>
-          <ChatInterface 
-            user={user} 
-            userBookings={userBookings} 
-            isAdminView={false}
-          />
-        </div>
-      )}
+                    <div className="unit-price">
+                      {availability.cost} ({availability.nights} nights)
+                    </div>
+                    
+                    <p style={{ fontSize: '0.9rem', color: '#666', margin: '0.5rem 0' }}>
+                      Minimum stay: {availability.minStayDays} nights
+                    </p>
+                    
+                    <div className="unit-actions">
+                      {availability.link && (
+                        <a 
+                          href={availability.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="airbnb-link"
+                        >
+                          View Details
+                        </a>
+                      )}
+                      <button 
+                        onClick={() => handleDirectBooking(availability)}
+                        className="book-button"
+                      >
+                        Book Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : showResults && searchResults.length === 0 ? (
+          <div className="no-results">
+            <h3>No available units found</h3>
+            <p>Try adjusting your search criteria or select flexible dates to view the calendar.</p>
+          </div>
+        ) : (
+          <div className="no-results">
+            <h3>Search for Available Units</h3>
+            <p>Use the search form above to find available accommodations.</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

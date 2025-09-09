@@ -77,6 +77,7 @@ export default function ListingView({ availabilityData, onBooking }) {
     }
   };
 
+  // FIXED: Better date validation logic
   const isValidSelection = () => {
     if (!selectedPeriod || !checkInDate || !checkOutDate) return false;
     
@@ -85,19 +86,41 @@ export default function ListingView({ availabilityData, onBooking }) {
     
     if (!availStart || !availEnd) return false;
     
-    const checkInDateObj = new Date(checkInDate);
-    const checkOutDateObj = new Date(checkOutDate);
+    // FIXED: Normalize all dates to midnight for proper comparison
+    const checkInDateObj = new Date(checkInDate + 'T00:00:00');
+    const checkOutDateObj = new Date(checkOutDate + 'T00:00:00');
+    const availStartNormalized = new Date(availStart.getFullYear(), availStart.getMonth(), availStart.getDate());
+    const availEndNormalized = new Date(availEnd.getFullYear(), availEnd.getMonth(), availEnd.getDate());
     
-    // Check if dates are within available period
-    if (checkInDateObj < availStart || checkInDateObj > availEnd) return false;
-    if (checkOutDateObj < availStart || checkOutDateObj > availEnd) return false;
-    
-    // Check minimum stay requirement
-    if (nights < selectedPeriod.minStayDays) return false;
+    console.log('Date validation:');
+    console.log(`Check-in: ${checkInDateObj.toDateString()}`);
+    console.log(`Check-out: ${checkOutDateObj.toDateString()}`);
+    console.log(`Available: ${availStartNormalized.toDateString()} to ${availEndNormalized.toDateString()}`);
+    console.log(`Period: ${selectedPeriod.dateRange}`);
     
     // Check if check-out is after check-in
-    if (checkOutDateObj <= checkInDateObj) return false;
+    if (checkOutDateObj <= checkInDateObj) {
+      console.log('Check-out must be after check-in');
+      return false;
+    }
     
+    // Check if dates are within available period (inclusive start, inclusive end for checkout)
+    if (checkInDateObj < availStartNormalized || checkInDateObj > availEndNormalized) {
+      console.log('Check-in date is outside available period');
+      return false;
+    }
+    if (checkOutDateObj < availStartNormalized || checkOutDateObj > availEndNormalized) {
+      console.log('Check-out date is outside available period');
+      return false;
+    }
+    
+    // Check minimum stay requirement
+    if (nights < selectedPeriod.minStayDays) {
+      console.log(`Minimum stay not met: ${nights} < ${selectedPeriod.minStayDays}`);
+      return false;
+    }
+    
+    console.log('All validations passed');
     return true;
   };
 
@@ -112,6 +135,7 @@ export default function ListingView({ availabilityData, onBooking }) {
       end: new Date(checkOutDate + 'T12:00:00')
     };
 
+    console.log('Proceeding with booking:', selectedDates, selectedPeriod);
     onBooking(selectedDates, selectedPeriod);
   };
 
@@ -317,11 +341,13 @@ export default function ListingView({ availabilityData, onBooking }) {
                   }
                   
                   const { start: availStart, end: availEnd } = parseDateRange(selectedPeriod.dateRange);
-                  const checkInDateObj = new Date(checkInDate);
-                  const checkOutDateObj = new Date(checkOutDate);
+                  const checkInDateObj = new Date(checkInDate + 'T00:00:00');
+                  const checkOutDateObj = new Date(checkOutDate + 'T00:00:00');
+                  const availStartNormalized = new Date(availStart.getFullYear(), availStart.getMonth(), availStart.getDate());
+                  const availEndNormalized = new Date(availEnd.getFullYear(), availEnd.getMonth(), availEnd.getDate());
                   
-                  if (checkInDateObj < availStart || checkInDateObj > availEnd || 
-                      checkOutDateObj < availStart || checkOutDateObj > availEnd) {
+                  if (checkInDateObj < availStartNormalized || checkInDateObj > availEndNormalized || 
+                      checkOutDateObj < availStartNormalized || checkOutDateObj > availEndNormalized) {
                     return `Dates must be within available period: ${selectedPeriod.dateRange}`;
                   }
                   

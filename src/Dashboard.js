@@ -13,7 +13,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [flexibleDates, setFlexibleDates] = useState(false);
-  const [data, setData] = useState([]);
   const [mergedAvailability, setMergedAvailability] = useState([]);
   const [loading, setLoading] = useState(false);
   const [resortOptions, setResortOptions] = useState([]);
@@ -24,6 +23,23 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
   
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Parse dateRange like "9/23-9/25" into start and end dates
+  const parseDateRange = (dateRange) => {
+    if (!dateRange || !dateRange.includes('-')) return { start: null, end: null };
+    
+    const [startPart, endPart] = dateRange.split('-');
+    const year = new Date().getFullYear();
+    
+    // Parse "9/23" as September 23
+    const [startMonth, startDay] = startPart.split('/');
+    const [endMonth, endDay] = endPart.split('/');
+    
+    const startDate = new Date(year, parseInt(startMonth) - 1, parseInt(startDay));
+    const endDate = new Date(year, parseInt(endMonth) - 1, parseInt(endDay));
+    
+    return { start: startDate, end: endDate };
+  };
 
   // Set activeTab based on current URL when component mounts or URL changes
   useEffect(() => {
@@ -44,7 +60,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
         const res = await fetch("https://worldmark-backend-production.up.railway.app/api/availability");
         const json = await res.json();
         console.log("Raw data from API:", json);
-        setData(json);
         
         // Extract unique resorts and unit types
         const resorts = [...new Set(json.map(item => item.resort))];
@@ -56,14 +71,14 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
         setResortOptions(resorts);
         setUnitTypeOptions(unitTypes);
         
-        // Process and merge overlapping bookings, then filter out booked dates
-        const processed = processBookingData(json);
-        console.log("Processed data:", processed);
+        // Since backend only returns raw data now, no need for complex processing
+        // Just add availabilityId for tracking
+        const processedData = json.map((item, index) => ({
+          ...item,
+          availabilityId: `${item.resort}_${item.unitType}_${index}`
+        }));
         
-        const filtered = filterBookedDates(processed, userBookings);
-        console.log("Filtered data (after removing booked dates):", filtered);
-        
-        setMergedAvailability(filtered);
+        setMergedAvailability(processedData);
         
       } catch (err) {
         console.error("Fetch error:", err);
@@ -73,70 +88,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     }
     fetchData();
   }, [userBookings]);
-
-  // Filter out booked dates from availability
-  const filterBookedDates = (availabilityData, bookings) => {
-    if (!bookings || bookings.length === 0) return availabilityData;
-
-    const now = new Date();
-    
-    // Get all active bookings (confirmed or pending within 24 hours)
-    const activeBookings = bookings.filter(booking => {
-      if (booking.status === 'confirmed') return true;
-      if (booking.status === 'cancelled') return false;
-      
-      // For pending bookings, check if within 24 hours
-      if (booking.status === 'pending' && booking.bookingExpiration) {
-        const expiration = new Date(booking.bookingExpiration);
-        return now < expiration;
-      }
-      return false;
-    });
-
-    console.log("Active bookings:", activeBookings);
-
-    return availabilityData.map(availability => {
-      // Find bookings that affect this specific availability slot
-      const conflictingBookings = activeBookings.filter(booking => 
-        booking.originalAvailabilityId === availability.availabilityId
-      );
-
-      if (conflictingBookings.length === 0) {
-        return availability; // No conflicts, return as-is
-      }
-
-      // Get all booked dates for this specific availability slot
-      const allBookedDates = conflictingBookings.flatMap(booking => booking.bookedDates);
-      const bookedDateSet = new Set(allBookedDates);
-
-      console.log("Booked dates for availability", availability.availabilityId, ":", allBookedDates);
-
-      // Check if there are any booked dates that overlap with this availability
-      const availabilityDates = getDateRange(availability.startDate, availability.endDate);
-      const hasConflict = availabilityDates.some(date => bookedDateSet.has(date));
-
-      if (hasConflict) {
-        // Any overlap means the entire availability slot becomes unavailable
-        return null;
-      }
-
-      // No conflicts, return availability as-is
-      return availability;
-    }).filter(Boolean); // Remove null entries
-  };
-
-  // Helper function to get date range
-  const getDateRange = (startDate, endDate) => {
-    const dates = [];
-    const current = new Date(startDate);
-    const end = new Date(endDate);
-    
-    while (current < end) {
-      dates.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
-    }
-    return dates;
-  };
 
   // Search for exact matches based on check-in/check-out dates
   const searchExactMatches = () => {
@@ -170,52 +121,20 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     // Find availabilities that contain the requested date range
     let matches = mergedAvailability.filter(availability => {
       console.log("RAW AVAILABILITY OBJECT:", availability);
-      console.log("startDate:", availability.startDate, "type:", typeof availability.startDate);
-      console.log("endDate:", availability.endDate, "type:", typeof availability.endDate);
       console.log("dateRange:", availability.dateRange);
       
-      let availStart, availEnd;
+      // Only parse from dateRange now
+      if (!availability.dateRange) {
+        console.log("No dateRange found!");
+        return false;
+      }
+
+      console.log("Using dateRange field:", availability.dateRange);
       
-      // Parse availability dates (they're in ISO format like "2025-08-16T07:00:00.000Z")
-      if (availability.startDate && availability.endDate) {
-        console.log("Using startDate and endDate fields");
-        
-        // Handle ISO format dates
-        const parseISODate = (isoString) => {
-          console.log("Parsing ISO date:", isoString);
-          const date = new Date(isoString);
-          console.log("Parsed to:", date);
-          // Convert to local date (strip time and timezone)
-          const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-          console.log("Local date:", localDate);
-          return localDate;
-        };
-        
-        availStart = parseISODate(availability.startDate);
-        availEnd = parseISODate(availability.endDate);
-      } else if (availability.dateRange) {
-        console.log("Using dateRange field");
-        // Parse from dateRange like "8/16-8/23"
-        const [startPart, endPart] = availability.dateRange.split('-');
-        console.log("Parsing from dateRange:", startPart, "to", endPart);
-        
-        // Add current year if not present
-        const currentYear = new Date().getFullYear();
-        const startWithYear = `${startPart}/${currentYear}`;
-        const endWithYear = `${endPart}/${currentYear}`;
-        
-        console.log("With year added:", startWithYear, "to", endWithYear);
-        
-        // Parse as M/D/YYYY
-        const parseMMDDYYYY = (dateStr) => {
-          const [month, day, year] = dateStr.split('/');
-          return new Date(year, month - 1, day);
-        };
-        
-        availStart = parseMMDDYYYY(startWithYear);
-        availEnd = parseMMDDYYYY(endWithYear);
-      } else {
-        console.log("No valid date fields found!");
+      const { start: availStart, end: availEnd } = parseDateRange(availability.dateRange);
+      
+      if (!availStart || !availEnd) {
+        console.log("Failed to parse dateRange!");
         return false;
       }
       
@@ -305,93 +224,6 @@ export default function Dashboard({ user, setBookingData, userBookings }) {
     
     setBookingData(bookingInfo);
     navigate('/booking-confirmation');
-  };
-
-  // Process booking data to merge overlapping periods by account
-  const processBookingData = (rawData) => {
-    // Group by account (second column from your sheet) AND resort/unit type
-    const groupedByAccountAndUnit = {};
-    
-    rawData.forEach((booking, index) => {
-      const account = booking.status; // This maps to your "Account" column
-      const unitKey = `${account}_${booking.resort}_${booking.unitType}`;
-      
-      if (!groupedByAccountAndUnit[unitKey]) {
-        groupedByAccountAndUnit[unitKey] = [];
-      }
-      
-      // Add a unique ID for tracking
-      groupedByAccountAndUnit[unitKey].push({
-        ...booking,
-        availabilityId: `${unitKey}_${index}`
-      });
-    });
-
-    const mergedBookings = [];
-
-    // Process each account+unit group
-    Object.keys(groupedByAccountAndUnit).forEach(unitKey => {
-      const unitBookings = groupedByAccountAndUnit[unitKey];
-      
-      // Sort by start date
-      unitBookings.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-      
-      // Merge overlapping/adjacent periods for same account+unit
-      const merged = mergeOverlappingPeriods(unitBookings);
-      mergedBookings.push(...merged);
-    });
-
-    return mergedBookings;
-  };
-
-  const mergeOverlappingPeriods = (bookings) => {
-    if (bookings.length === 0) return [];
-
-    const merged = [];
-    let current = { ...bookings[0] };
-    
-    // Extract minimum days from usage field
-    current.minStayDays = extractMinStayDays(current.usage);
-
-    for (let i = 1; i < bookings.length; i++) {
-      const next = bookings[i];
-      const currentEnd = new Date(current.endDate);
-      const nextStart = new Date(next.startDate);
-      
-      // Check if periods overlap or are adjacent (within 1 day)
-      const daysDifference = (nextStart - currentEnd) / (1000 * 60 * 60 * 24);
-      
-      if (daysDifference <= 1) {
-        // Merge periods - extend current to include next
-        current.endDate = new Date(Math.max(new Date(current.endDate), new Date(next.endDate)));
-        current.dateRange = formatDateRange(current.startDate, current.endDate);
-        current.nights = Math.ceil((new Date(current.endDate) - new Date(current.startDate)) / (1000 * 60 * 60 * 24));
-        
-        // Keep the minimum stay requirement (use the most restrictive)
-        const nextMinStay = extractMinStayDays(next.usage);
-        current.minStayDays = Math.max(current.minStayDays, nextMinStay);
-      } else {
-        // No overlap, add current to merged and start new period
-        merged.push(current);
-        current = { ...next };
-        current.minStayDays = extractMinStayDays(current.usage);
-      }
-    }
-    
-    merged.push(current);
-    return merged;
-  };
-
-  const extractMinStayDays = (usage) => {
-    if (!usage) return 1;
-    const match = usage.match(/(\d+)D/i);
-    return match ? parseInt(match[1]) : 1;
-  };
-
-  const formatDateRange = (startDate, endDate) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.getMonth() + 1}/${start.getDate()}-${end.getMonth() + 1}/${end.getDate()}`;
   };
 
   const filterAvailability = () => {

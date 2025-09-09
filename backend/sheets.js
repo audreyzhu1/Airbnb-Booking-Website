@@ -1,4 +1,3 @@
-// backend/sheets.js
 console.log("✅ sheets.js loaded");
 
 const { google } = require("googleapis");
@@ -36,33 +35,13 @@ const sheets = google.sheets({ version: "v4", auth });
 
 // Use environment variable in production, fallback to your spreadsheet ID
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "1-geh1K6OxDVs97XZaoZ4DIdA6maC-FNpoX3vlwSHxb0";
-const RANGE = "Sheet1!A2:M"; // Extended to M to ensure we get all columns
-
-function parseDateRange(range) {
-  if (!range || !range.includes("-")) {
-    throw new Error(`Invalid date range: ${range}`);
-  }
-  
-  const [start, end] = range.split("-");
-  const year = "2025";
-  
-  const format = (dateStr) => {
-    const [month, day] = dateStr.split("/");
-    // Create date string in YYYY-MM-DD format and parse as local date
-    const dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    return new Date(dateString + 'T00:00:00'); // Force local timezone
-  };
-  
-  return {
-    startDate: format(start),
-    endDate: format(end),
-  };
-}
+const RANGE = "Sheet1!A2:M";
 
 function getResortPhoto(resortName) {
   const resortPhotos = {
     'Dolphin C': 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=250&fit=crop&q=80',
-    'Dolphin Cove': 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=250&fit=crop&q=80'
+    'Dolphin Cove': 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&h=250&fit=crop&q=80',
+    'Yellowstone': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=250&fit=crop&q=80'
   };
   return resortPhotos[resortName?.trim()] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=250&fit=crop&q=80';
 }
@@ -91,12 +70,6 @@ async function getSheetData() {
 
     const rows = res.data.values || [];
     console.log("✅ Total rows fetched from Google Sheets:", rows.length);
-    
-    // Debug: Show first few rows
-    console.log("🔍 First 3 rows from Google Sheets:");
-    rows.slice(0, 3).forEach((row, index) => {
-      console.log(`Row ${index}:`, row);
-    });
 
     return rows
       .filter((r) => {
@@ -109,18 +82,14 @@ async function getSheetData() {
       })
       .map((r, index) => {
         try {
-          console.log(`⏳ Parsing row ${index + 2}:`, r[4]);
-          const { startDate, endDate } = parseDateRange(r[4]);
-          
+          // NO DATE PARSING - just use raw string values
           const parsedRow = {
             // Column mapping based on your spreadsheet structure:
             cancelByDate: r[0]?.trim() || '',        // A: Cancel-By Date
             account: r[1]?.trim() || '',             // B: Account (A, A2, Q, New, JA, V)
             resort: r[2]?.trim() || '',              // C: Resort (Dolphin Cove)
             unitType: r[3]?.trim() || '',            // D: Bdrm (3 bedroom, 2 bedroom 1 bath, etc.)
-            dateRange: r[4]?.trim() || '',           // E: Date Range (6/30-7/3)
-            startDate,
-            endDate,
+            dateRange: r[4]?.trim() || '',           // E: Date Range (9/23-9/25) - RAW STRING ONLY
             nights: parseInt(r[5]) || 0,             // F: # of days
             bookDate: r[6]?.trim() || '',            // G: Book Date
             cost: r[7]?.trim() || '',                // H: Cash Costs ($366.60)
@@ -134,14 +103,8 @@ async function getSheetData() {
             photo: getResortPhoto(r[2]),
             link: generateAirbnbLink(r[2], r[9]),
             minStayDays: extractMinStayDays(r[11])   // Extract from Usage column
+            // NO startDate or endDate fields - frontend will parse dateRange when needed
           };
-          
-          console.log("✅ Parsed row:", {
-            resort: parsedRow.resort,
-            unitType: parsedRow.unitType,
-            dateRange: parsedRow.dateRange,
-            account: parsedRow.account
-          });
           
           return parsedRow;
         } catch (err) {
